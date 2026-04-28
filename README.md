@@ -2,6 +2,10 @@
 
 A PySide6 desktop application for simulating, visualizing, and fitting one-dimensional Maxwell-Bloch models to astronomical maser light-curve data. The application combines an interactive Qt interface, configurable physical and numerical parameters, Numba-accelerated time evolution, and publication-oriented plotting/export tools.
 
+## Screenshot
+
+![Maxwell Bloch Solver](assets/screenshot.png)
+
 ## Features
 
 - Interactive GUI for Maxwell-Bloch model configuration and visualization.
