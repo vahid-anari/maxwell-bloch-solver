@@ -7,7 +7,7 @@ __pycache__/
 .ruff_cache/
 
 # Virtual environments
-1.venv/
+.venv/
 venv/
 env/
 
@@ -19,4 +19,5 @@ env/
 # Local build outputs
 dist/
 build/
+design/
 *.egg-info/
