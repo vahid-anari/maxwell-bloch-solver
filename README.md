@@ -37,8 +37,8 @@ This project requires Python 3.10 or newer. Python 3.11 or 3.12 is recommended.
 Clone the repository and create a virtual environment:
 
 ```bash
-git clone https://github.com/USERNAME/REPOSITORY.git
-cd REPOSITORY
+git clone https://github.com/vahid-anari/maxwell-bloch-solver.git
+cd maxwell-bloch-solver
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
