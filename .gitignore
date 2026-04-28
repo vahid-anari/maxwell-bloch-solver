@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+1.venv/
+venv/
+env/
+
+# macOS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Local build outputs
+dist/
+build/
+*.egg-info/

@@ -1,0 +1,937 @@
+{
+  "figure": {
+    "main": {
+      "nrows": 2,
+      "ncols": 1,
+      "sharex": true,
+      "figsize": [
+        14.52,
+        4.23
+      ],
+      "dpi": 100,
+      "facecolor": "floralwhite",
+      "edgecolor": "k",
+      "gridspec_kw": {
+        "height_ratios": [
+          5,
+          2
+        ],
+        "hspace": 0.15
+      }
+    },
+    "science_style": false,
+    "margin": {
+      "left": 0.06,
+      "right": 0.97,
+      "bottom": 0.15,
+      "top": 0.94
+    }
+  },
+  "axes": {
+    "zero_h_line": {
+      "color": "k",
+      "linestyle": "--",
+      "linewidth": 0.75
+    },
+    "cosh_peak": {
+      "line": {
+        "color": "r",
+        "linestyle": "-",
+        "linewidth": 0.75,
+        "alpha": 0.6
+      },
+      "span": {
+        "color": "b",
+        "alpha": 0.1
+      }
+    },
+    "label_font": {
+      "fontsize": 13,
+      "fontname": "Times New Roman"
+    },
+    "axis_offset_font": {
+      "fontsize": 10,
+      "fontname": "Times New Roman"
+    },
+    "ticks": {
+      "axis": "both",
+      "direction": "in",
+      "labelsize": 11,
+      "labelfontfamily": "Times New Roman",
+      "left": true,
+      "right": true,
+      "top": true,
+      "bottom": true
+    },
+    "ticks_major": {
+      "which": "major",
+      "length": 3.5,
+      "width": 0.7
+    },
+    "ticks_minor": {
+      "which": "minor",
+      "length": 1.75,
+      "width": 0.5
+    },
+    "xaxis_minor_locator": 4,
+    "yaxis_minor_locator": 4
+  },
+  "lines": {
+    "top_panel": {
+      "data_points": {
+        "label": "",
+        "unit": "",
+        "props": {
+          "linestyle": "",
+          "marker": "o",
+          "markersize": 3,
+          "color": "k"
+        }
+      },
+      "flux": {
+        "label": "F",
+        "unit": "\\mathrm{Jy}",
+        "props": {
+          "color": "b",
+          "linestyle": "-",
+          "linewidth": 1.25
+        }
+      }
+    },
+    "bottom_panel": {
+      "w": {
+        "label": "w",
+        "unit": "-",
+        "combo_label": "w",
+        "props": {
+          "color": "m",
+          "linestyle": "-",
+          "linewidth": 1.25
+        }
+      },
+      "lambda_n": {
+        "label": "\\Lambda_n",
+        "unit": "\\Lambda_0",
+        "combo_label": "Λₙ",
+        "props": {
+          "color": "c",
+          "linestyle": "-",
+          "linewidth": 1.25
+        }
+      },
+      "A0": {
+        "label": "A\\vert_{z=0}",
+        "unit": "A_0",
+        "combo_label": "A|z=0",
+        "props": {
+          "color": "orange",
+          "linestyle": "-",
+          "linewidth": 1.25
+        }
+      }
+    }
+  },
+  "tabs": {
+    "sample": {
+      "props": {
+        "label": "Sample"
+      },
+      "widgets": {
+        "sample_props": {
+          "type": "sample-props",
+          "path": "solve.sample",
+          "layout": {
+            "rows": [
+              {
+                "groups": [
+                  {
+                    "label": "Transition",
+                    "orientation": "h",
+                    "widgets": [
+                      "nu",
+                      "gamma"
+                    ]
+                  },
+                  {
+                    "label": "Time Scale",
+                    "orientation": "h",
+                    "widgets": [
+                      "t0"
+                    ]
+                  }
+                ]
+              },
+              {
+                "groups": [
+                  {
+                    "label": "Medium",
+                    "orientation": "v",
+                    "widgets": [
+                      "l",
+                      "n0"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "nu": {
+            "type": "line-edit",
+            "label": "\\nu",
+            "init_val": 6668.519e6,
+            "unit_to_si_factor": 1.0e6,
+            "unit_label": "\\mathrm{MHz}",
+            "val_fmt": "{:.9g}",
+            "width_chars": 15,
+            "max_length": 15,
+            "min_limit": 0,
+            "min_limit_inclusive": false
+          },
+          "gamma": {
+            "type": "line-edit",
+            "label": "\\Gamma",
+            "init_val": 1.56e-9,
+            "unit_to_si_factor": 1.0,
+            "unit_label": "\\mathrm{s^{-1}}",
+            "val_fmt": "{:.9g}",
+            "width_chars": 15,
+            "max_length": 15,
+            "min_limit": 0,
+            "min_limit_inclusive": false
+          },
+          "t0": {
+            "type": "line-edit",
+            "label": "T_0",
+            "init_val": 86400.0,
+            "unit_to_si_factor": 1.0,
+            "unit_label": "\\mathrm{s}",
+            "val_fmt": "{:.9g}",
+            "width_chars": 15,
+            "max_length": 15,
+            "min_limit": 0,
+            "min_limit_inclusive": false
+          },
+          "l": {
+            "label": "L",
+            "type": "float-slider",
+            "unit": "\\mathrm{m}",
+            "unit_to_si_factor": 1.0,
+            "min_val": 1.0e12,
+            "max_val": 1.0e13,
+            "init_val": 7.5e12,
+            "val_fmt": "{:.3S}",
+            "min_limit": 0,
+            "min_limit_inclusive": false,
+            "max_limit": 1e100,
+            "max_limit_inclusive": false
+          },
+          "n0": {
+            "label": "n_0",
+            "type": "float-slider",
+            "unit": "\\mathrm{m}^{-3}",
+            "unit_to_si_factor": 1.0,
+            "min_val": 1.0e-7,
+            "max_val": 1.0e-6,
+            "init_val": 5.3e-7,
+            "val_fmt": "{:.3S}",
+            "min_limit": 0,
+            "min_limit_inclusive": false,
+            "max_limit": 1e100,
+            "max_limit_inclusive": false
+          }
+        }
+      }
+    },
+    "grid": {
+      "props": {
+        "label": "Grid",
+        "groups": [
+          {
+            "id": "time_grid",
+            "label": "Time Grid",
+            "orientation": "v",
+            "widgets": [
+              "t_max",
+              "nt"
+            ]
+          },
+          {
+            "id": "spatial_grid",
+            "label": "Spatial Grid",
+            "orientation": "v",
+            "widgets": [
+              "nz"
+            ]
+          }
+        ]
+      },
+      "widgets": {
+        "nt": {
+          "label": "N_t",
+          "type": "int-slider",
+          "path": "solve.grid.nt",
+          "min_val": 500,
+          "max_val": 5000,
+          "init_val": 2000,
+          "val_fmt": "{:.9S}",
+          "min_limit": 1,
+          "min_limit_inclusive": false,
+          "max_limit": 1e10,
+          "max_limit_inclusive": false
+        },
+        "nz": {
+          "label": "N_z",
+          "type": "int-slider",
+          "path": "solve.grid.nz",
+          "min_val": 500,
+          "max_val": 5000,
+          "init_val": 2000,
+          "val_fmt": "{:.9S}",
+          "min_limit": 1,
+          "min_limit_inclusive": false,
+          "max_limit": 1e10,
+          "max_limit_inclusive": false
+        },
+        "t_max": {
+          "label": "T_\\mathrm{max}",
+          "type": "float-slider",
+          "path": "solve.grid.t_max",
+          "unit": "T_0",
+          "min_val": 100,
+          "max_val": 7000,
+          "init_val": 2000,
+          "val_fmt": "{:,.2f}",
+          "min_limit": 1,
+          "min_limit_inclusive": false,
+          "max_limit": 1e10,
+          "max_limit_inclusive": false
+        }
+      }
+    },
+    "slice": {
+      "props": {
+        "label": "Slice",
+        "groups": [
+          {
+            "id": "slice",
+            "label": "Slice",
+            "orientation": "v",
+            "widgets": [
+              "z_index"
+            ]
+          }
+        ]
+      },
+      "widgets": {
+        "z_index": {
+          "type": "array-slider",
+          "label": "z",
+          "path": "slice.z",
+          "unit": "L",
+          "array_length": 21,
+          "min_val": 0.0,
+          "max_val": 1.0,
+          "init_index": -1,
+          "val_fmt": "{:.2f}"
+        }
+      }
+    },
+    "dynamics": {
+      "props": {
+        "label": "Dynamics",
+        "groups": [
+          {
+            "id": "relaxation_dephasing",
+            "label": "Relaxation && Dephasing",
+            "orientation": "v",
+            "widgets": [
+              "t1",
+              "t2"
+            ]
+          }
+        ]
+      },
+      "widgets": {
+        "t1": {
+          "label": "T_1",
+          "type": "float-slider",
+          "path": "solve.dynamics.t1",
+          "unit": "T_0",
+          "min_val": 1,
+          "max_val": 100,
+          "init_val": 45,
+          "val_fmt": "{:.3S}",
+          "min_limit": 0,
+          "min_limit_inclusive": false
+        },
+        "t2": {
+          "label": "T_2",
+          "type": "float-slider",
+          "path": "solve.dynamics.t2",
+          "unit": "T_0",
+          "min_val": 1,
+          "max_val": 30,
+          "init_val": 8,
+          "val_fmt": "{:.3S}",
+          "min_limit": 0,
+          "min_limit_inclusive": false
+        }
+      }
+    },
+    "ics": {
+      "props": {
+        "label": "ICs"
+      },
+      "widgets": {
+        "ics": {
+          "type": "ics",
+          "path": "solve.ics",
+          "use_theta0": true,
+          "init_w0": 1.0,
+          "init_R0": 1.0e-8,
+          "val_fmt": "{:0.3S}"
+        }
+      }
+    },
+    "bcs": {
+      "props": {
+        "label": "BCs"
+      },
+      "widgets": {
+        "cosh": {
+          "type": "cosh",
+          "path": "solve.bcs",
+          "f": "A\\vert_{z=0}",
+          "x": "\\tau",
+          "symmetric": true,
+          "arr_length": 1,
+          "current_idx": 0,
+          "a": {
+            "label": "A",
+            "html_label": "A",
+            "unit": "A_0",
+            "min_val": -10.0,
+            "max_val": 10.0,
+            "init_vals": [
+              0.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": -1e100,
+            "min_limit_inclusive": false,
+            "max_limit": 1e100,
+            "max_limit_inclusive": false
+          },
+          "x0": {
+            "label": "\\tau_0",
+            "html_label": "τ<sub>0</sub>",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 1000.0,
+            "init_vals": [
+              50.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": -1e100,
+            "min_limit_inclusive": false,
+            "max_limit": 1e100,
+            "max_limit_inclusive": false
+          },
+          "w": {
+            "label": "w",
+            "html_label": "w",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 10.0,
+            "init_vals": [
+              1.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": 0.0,
+            "min_limit_inclusive": true
+          },
+          "wl": {
+            "label": "w_l",
+            "html_label": "w<sub>l</sub>",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 10.0,
+            "init_vals": [
+              1.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": 0.0,
+            "min_limit_inclusive": true
+          },
+          "wr": {
+            "label": "w_r",
+            "html_label": "w<sub>r</sub>",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 10.0,
+            "init_vals": [
+              1.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": 0.0,
+            "min_limit_inclusive": true
+          },
+          "xp": {
+            "label": "\\tau_p",
+            "html_label": "τ<sub>p</sub>",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 10.0,
+            "init_vals": 1.0,
+            "val_fmt": "{:.3S}",
+            "min_limit": 0.0,
+            "min_limit_inclusive": true,
+            "max_limit": 1e100,
+            "max_limit_inclusive": false
+          },
+          "same_a": {
+            "label": "Use Same Λ",
+            "checked": false
+          },
+          "same_w": {
+            "label": "Use Same w",
+            "checked": false
+          },
+          "same_wl": {
+            "label": "Use Same wₗ",
+            "checked": false
+          },
+          "same_wr": {
+            "label": "Use Same wᵣ",
+            "checked": false
+          },
+          "use_xp": {
+            "label": "Use τₚ",
+            "checked": false
+          }
+        }
+      }
+    },
+    "pump1": {
+      "props": {
+        "label": "Pump 1"
+      },
+      "widgets": {
+        "cosh": {
+          "type": "cosh",
+          "path": "solve.pump.cosh1",
+          "f": "\\Lambda_n^{(1)}",
+          "x": "\\tau",
+          "symmetric": true,
+          "arr_length": 1,
+          "current_idx": 0,
+          "a": {
+            "label": "\\Lambda",
+            "html_label": "Λ",
+            "unit": "\\Lambda_0",
+            "min_val": 0.0,
+            "max_val": 1.0,
+            "init_vals": [
+              0.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": -1e100,
+            "min_limit_inclusive": false,
+            "max_limit": 1e100,
+            "max_limit_inclusive": false
+          },
+          "x0": {
+            "label": "\\tau_0",
+            "html_label": "τ<sub>0</sub>",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 300.0,
+            "init_vals": [
+              65.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": -1e100,
+            "min_limit_inclusive": false,
+            "max_limit": 1e100,
+            "max_limit_inclusive": false
+          },
+          "w": {
+            "label": "w",
+            "html_label": "w",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 20.0,
+            "init_vals": [
+              10.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": 0.0,
+            "min_limit_inclusive": true
+          },
+          "wl": {
+            "label": "w_l",
+            "html_label": "w<sub>l</sub>",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 10.0,
+            "init_vals": [
+              1.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": 0.0,
+            "min_limit_inclusive": true
+          },
+          "wr": {
+            "label": "w_r",
+            "html_label": "w<sub>r</sub>",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 10.0,
+            "init_vals": [
+              1.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": 0.0,
+            "min_limit_inclusive": true
+          },
+          "xp": {
+            "label": "\\tau_p",
+            "html_label": "τ<sub>p</sub>",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 300.0,
+            "init_vals": 250.0,
+            "val_fmt": "{:.3S}",
+            "min_limit": 0.0,
+            "min_limit_inclusive": true,
+            "max_limit": 1e100,
+            "max_limit_inclusive": false
+          },
+          "same_a": {
+            "label": "Use Same Λ",
+            "checked": false
+          },
+          "same_w": {
+            "label": "Use Same w",
+            "checked": false
+          },
+          "same_wl": {
+            "label": "Use Same wₗ",
+            "checked": false
+          },
+          "same_wr": {
+            "label": "Use Same wᵣ",
+            "checked": false
+          },
+          "use_xp": {
+            "label": "Use τₚ",
+            "checked": false
+          }
+        }
+      }
+    },
+    "pump2": {
+      "props": {
+        "label": "Pump 2"
+      },
+      "widgets": {
+        "cosh": {
+          "type": "cosh",
+          "path": "solve.pump.cosh2",
+          "f": "\\Lambda_n^{(2)}",
+          "x": "\\tau",
+          "symmetric": true,
+          "arr_length": 1,
+          "current_idx": 0,
+          "a": {
+            "label": "\\Lambda",
+            "html_label": "Λ",
+            "unit": "\\Lambda_0",
+            "min_val": -10.0,
+            "max_val": 10.0,
+            "init_vals": [
+              0.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": -1e100,
+            "min_limit_inclusive": false,
+            "max_limit": 1e100,
+            "max_limit_inclusive": false
+          },
+          "x0": {
+            "label": "\\tau_0",
+            "html_label": "τ<sub>0</sub>",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 1000.0,
+            "init_vals": [
+              50.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": -1e100,
+            "min_limit_inclusive": false,
+            "max_limit": 1e100,
+            "max_limit_inclusive": false
+          },
+          "w": {
+            "label": "w",
+            "html_label": "w",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 10.0,
+            "init_vals": [
+              1.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": 0.0,
+            "min_limit_inclusive": true
+          },
+          "wl": {
+            "label": "w_l",
+            "html_label": "w<sub>l</sub>",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 10.0,
+            "init_vals": [
+              1.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": 0.0,
+            "min_limit_inclusive": true
+          },
+          "wr": {
+            "label": "w_r",
+            "html_label": "w<sub>r</sub>",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 10.0,
+            "init_vals": [
+              1.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": 0.0,
+            "min_limit_inclusive": true
+          },
+          "xp": {
+            "label": "\\tau_p",
+            "html_label": "τ<sub>p</sub>",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 10.0,
+            "init_vals": 1.0,
+            "val_fmt": "{:.3S}",
+            "min_limit": 0.0,
+            "min_limit_inclusive": true,
+            "max_limit": 1e100,
+            "max_limit_inclusive": false
+          },
+          "same_a": {
+            "label": "Use Same Λ",
+            "checked": false
+          },
+          "same_w": {
+            "label": "Use Same w",
+            "checked": false
+          },
+          "same_wl": {
+            "label": "Use Same wₗ",
+            "checked": false
+          },
+          "same_wr": {
+            "label": "Use Same wᵣ",
+            "checked": false
+          },
+          "use_xp": {
+            "label": "Use τₚ",
+            "checked": false
+          }
+        }
+      }
+    },
+    "fit": {
+      "props": {
+        "label": "Fit Mode",
+        "rows": [
+          {
+            "groups": [
+              {
+                "label": "Data Units",
+                "orientation": "h",
+                "widgets": [
+                  "data_time_unit",
+                  "data_flux_unit"
+                ]
+              },
+              {
+                "label": "Data Alignment",
+                "orientation": "v",
+                "widgets": [
+                  "data_time_offset"
+                ]
+              }
+            ]
+          },
+          {
+            "groups": [
+              {
+                "label": "Results Alignment",
+                "orientation": "v",
+                "widgets": [
+                  "results_time_offset",
+                  "results_intensity_scale"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "widgets": {
+        "data_time_unit": {
+          "type": "combo-box",
+          "path": "data.unit.time",
+          "label": "t",
+          "items": [
+            "d",
+            "h",
+            "m",
+            "s",
+            "ms",
+            "µs",
+            "ns"
+          ]
+        },
+        "data_flux_unit": {
+          "type": "combo-box",
+          "path": "data.unit.flux",
+          "label": "F",
+          "items": [
+            "Jy"
+          ]
+        },
+        "data_time_offset": {
+          "type": "line-edit",
+          "path": "data.offset.time",
+          "label": "t_\\mathrm{offset}",
+          "init_val": 0.0,
+          "val_fmt": "{:.6g}",
+          "width_chars": 11
+        },
+        "results_time_offset": {
+          "type": "float-slider",
+          "label": "t_\\mathrm{offset}",
+          "path": "results.offset.time",
+          "min_val": 5.0e4,
+          "max_val": 6.0e4,
+          "init_val": 5.0e4,
+          "val_fmt": "{:.6S}",
+          "min_limit": -1e100,
+          "min_limit_inclusive": false,
+          "max_limit": 1e100,
+          "max_limit_inclusive": false
+        },
+        "results_intensity_scale": {
+          "type": "float-slider",
+          "label": "I_\\mathrm{scale}",
+          "path": "results.scale.intensity",
+          "min_val": 0.01,
+          "max_val": 100.0,
+          "init_val": 1.0,
+          "val_fmt": "{:.3S}",
+          "min_limit": 0.0,
+          "min_limit_inclusive": false,
+          "max_limit": 1e100,
+          "max_limit_inclusive": false
+        }
+      }
+    },
+    "range": {
+      "props": {
+        "label": "Range",
+        "groups": [
+          {
+            "id": "display range",
+            "label": "Range",
+            "orientation": "v",
+            "widgets": [
+              "time",
+              "flux",
+              "w",
+              "lambda_n",
+              "A0"
+            ]
+          }
+        ]
+      },
+      "widgets": {
+        "time": {
+          "type": "range-slider",
+          "label": "t",
+          "path": "display.range.time",
+          "min_val": 0,
+          "max_val": 65000,
+          "init_vals": [
+            0.0,
+            2000.0
+          ],
+          "use_margins": false,
+          "margins": [
+            10,
+            10
+          ],
+          "val_fmt": "{:,.2f}"
+        },
+        "flux": {
+          "type": "range-slider",
+          "label": "F",
+          "path": "display.range.flux",
+          "min_val": -1.0,
+          "max_val": 10.0,
+          "use_margins": true,
+          "margins": [
+            10,
+            10
+          ],
+          "val_fmt": "{:.3S}"
+        },
+        "lambda_n": {
+          "type": "range-slider",
+          "label": "\\Lambda_n",
+          "path": "display.range.lambda_n",
+          "min_val": -10.0,
+          "max_val": 10.0,
+          "use_margins": true,
+          "margins": [
+            10,
+            10
+          ],
+          "val_fmt": "{:.3S}"
+        },
+        "w": {
+          "type": "range-slider",
+          "label": "w",
+          "path": "display.range.w",
+          "min_val": -10.0,
+          "max_val": 10.0,
+          "use_margins": true,
+          "margins": [
+            10,
+            10
+          ],
+          "val_fmt": "{:.3S}"
+        },
+        "A0": {
+          "type": "range-slider",
+          "label": "A\\vert_{z=0}",
+          "path": "display.range.A0",
+          "min_val": -10.0,
+          "max_val": 10.0,
+          "use_margins": true,
+          "margins": [
+            10,
+            10
+          ],
+          "val_fmt": "{:.3S}"
+        }
+      }
+    }
+  }
+}
