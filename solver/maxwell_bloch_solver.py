@@ -6,7 +6,7 @@ and advances the coupled field and material equations.
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Mapping
 
 import numpy as np
 from numba import njit
@@ -42,8 +42,8 @@ def build_grids(t_max: float, nt: int, nz: int):
 
 
 def evaluate_cosh_profile(
-    t: np.ndarray,
-    params: Dict[str, Any],
+        t: np.ndarray,
+        params: Mapping[str, Any],
 ) -> np.ndarray:
     """Evaluate the configured sech-squared drive profile.
 
@@ -53,8 +53,12 @@ def evaluate_cosh_profile(
             ``cosh_func``.
 
     Returns:
-        Drive profile evaluated at the supplied times.
+        Drive profile evaluated at the supplied times. If ``params`` is empty,
+        a zero-valued profile with the same shape as ``t`` is returned.
     """
+
+    if not params:
+        return np.zeros_like(t, dtype=np.float64)
 
     return cosh_func(
         symmetric=params["symmetric"],
@@ -169,17 +173,17 @@ def _dA_dz(eta, R, dz):
 
 @njit(inline="always", nogil=True, cache=True)
 def _rk4_dn_dR(
-    w,
-    R,
-    A,
-    inv_t1,
-    inv_t2,
-    w0,
-    R0,
-    lambda_n,
-    dt,
-    half_dt,
-    dt6,
+        w,
+        R,
+        A,
+        inv_t1,
+        inv_t2,
+        w0,
+        R0,
+        lambda_n,
+        dt,
+        half_dt,
+        dt6,
 ):
     """Advance population and coherence with one fourth-order Runge-Kutta step.
 
@@ -224,18 +228,18 @@ def _rk4_dn_dR(
 # -----------------------------------------------------------------------------
 @njit(nogil=True, cache=True)
 def _runge_kutta_solver(
-    t,
-    dt,
-    z,
-    dz,
-    n_z_planes,
-    w0,
-    R0,
-    A0,
-    lambda_n,
-    t1,
-    t2,
-    eta,
+        t,
+        dt,
+        z,
+        dz,
+        n_z_planes,
+        w0,
+        R0,
+        A0,
+        lambda_n,
+        t1,
+        t2,
+        eta,
 ):
     """Advance the coupled Maxwell-Bloch system across the simulation grid.
 
@@ -365,9 +369,9 @@ def solve_maxwell_bloch(params):
         nz=params["solve.grid.nz"],
         t_max=params["solve.grid.t_max"],
     )
-    lambda_n = evaluate_cosh_profile(t, params["solve.pump.cosh1"]) + evaluate_cosh_profile(
-        t, params["solve.pump.cosh2"]
-    )
+    lambda_n = (evaluate_cosh_profile(t, params.get("solve.pump.cosh1", {})) +
+                evaluate_cosh_profile(t, params.get("solve.pump.cosh2", {}))
+                )
     if params["solve.ics"]["use_theta0"]:
         theta0 = params["solve.sample"]["theta0"]
         w0, R0 = compute_initial_conditions(z, w0=np.cos(theta0), R0=np.sin(theta0))

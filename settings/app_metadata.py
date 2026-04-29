@@ -14,7 +14,7 @@ APP_AUTHOR_NAME = "Vahid Anari"
 APP_AUTHOR_EMAIL = "vahid.anari8@gmail.com"
 """Primary author email address."""
 
-APP_AUTHOR_GITHUB = ""
+APP_AUTHOR_GITHUB = "https://github.com/vahid-anari/maxwell-bloch-solver"
 """Author GitHub profile or repository URL, if available."""
 
 APP_AUTHOR_WEBSITE = ""
