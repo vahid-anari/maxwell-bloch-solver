@@ -69,7 +69,7 @@ def pretty_sci_text(
     if notation == "html":
         return f"{mant_str}×10<sup>{exp}</sup>"
     if notation == "latex":
-        return rf"{mant_str}	imes 10^{{{exp}}}"
+        return rf"{mant_str}\times 10^{{{exp}}}"
     return f"{mant_str}×10^{exp}"
 
 
