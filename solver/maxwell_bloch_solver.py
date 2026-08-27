@@ -307,7 +307,7 @@ def _runge_kutta_solver(
         A_old[t_idx] = A0[t_idx]
 
     w_result[0, :] = w_old
-    I_result[0, :] = A_old.real * A_old.real + A_old.imag * A_old.imag
+    I_result[0, :] = A_old * A_old
     i = 1
 
     for z_idx in range(1, nz):
@@ -336,7 +336,7 @@ def _runge_kutta_solver(
 
         if i < n_z_planes and z_plane_indices[i] == z_idx:
             w_result[i, :] = w_new
-            I_result[i, :] = A_new.real * A_new.real + A_new.imag * A_new.imag
+            I_result[i, :] = A_new * A_new
             i += 1
 
         w_old, w_new = w_new, w_old
@@ -380,18 +380,9 @@ def solve_maxwell_bloch(params):
 
     A0 = evaluate_cosh_profile(t, params["solve.bcs"])
     w, I = _runge_kutta_solver(
-        t=t,
-        dt=dt,
-        z=z,
-        dz=dz,
-        n_z_planes=params["slice.z"]["arr_length"],
-        w0=w0,
-        R0=R0,
-        A0=A0,
-        lambda_n=lambda_n,
-        t1=params["solve.dynamics.t1"],
-        t2=params["solve.dynamics.t2"],
-        eta=params["solve.sample"]["eta"],
+        t=t, dt=dt, z=z, dz=dz, n_z_planes=params["slice.z"]["arr_length"],
+        w0=w0, R0=R0, A0=A0, lambda_n=lambda_n,
+        t1=params["solve.dynamics.t1"], t2=params["solve.dynamics.t2"], eta=params["solve.sample"]["eta"],
     )
 
     return {

@@ -169,6 +169,7 @@ class UpdatePipeline:
         get_bottom_plot: Callable[[], Optional[str]],
         get_fit_mode: Callable[[], bool],
         set_chi_square: Callable[[Optional[float]], None],
+        set_i_max: Callable[[Optional[float]], None],
         update_cosh_peak: Callable[[], None],
         redraw: Callable[[], None],
     ) -> None:
@@ -192,6 +193,7 @@ class UpdatePipeline:
         self._get_bottom_plot = get_bottom_plot
         self._get_fit_mode = get_fit_mode
         self._set_chi_square = set_chi_square
+        self._set_i_max = set_i_max
         self._update_cosh_peak = update_cosh_peak
         self._redraw = redraw
 
@@ -305,8 +307,11 @@ class UpdatePipeline:
         if fit_mode:
             time = params["results.offset.time"] + time * get_time_unit_scale(params)
             imax = np.max(intensity)
+            self._set_i_max(imax)
             if imax != 0:
                 intensity = intensity * params["results.scale.intensity"] / imax
+        else:
+            self._set_i_max(None)
 
         self.displayed_curves.results.time = time
         self.displayed_curves.results.intensity = intensity

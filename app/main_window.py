@@ -212,6 +212,7 @@ class MBESolverApp(QMainWindow):
             get_bottom_plot=lambda: self._bottom_plot,
             get_fit_mode=lambda: self._fit_mode,
             set_chi_square=self._velocity_bar.set_chi_square,
+            set_i_max=self._velocity_bar.set_i_max,
             update_cosh_peak=self._update_cosh_peak,
             redraw=self._canvas.redraw,
         )
@@ -374,7 +375,6 @@ class MBESolverApp(QMainWindow):
 
         if not fit_mode:
             self._velocity_bar.set_available_velocities([])
-            self._velocity_bar.set_chi_square(None)
 
     def _set_params_path(self, path: Optional[Path]) -> None:
         """Store the current parameter-file path and update the status bar.
