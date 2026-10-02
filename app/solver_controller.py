@@ -10,7 +10,7 @@ from typing import Any, Callable
 
 from PySide6.QtCore import QObject, QThread, Signal
 
-from solver.maxwell_bloch_solver import solve_maxwell_bloch
+from solver.maxwell_bloch import solve_maxwell_bloch
 
 
 class SolverWorker(QObject):

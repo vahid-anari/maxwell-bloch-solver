@@ -11,6 +11,7 @@ from typing import Any, Optional
 import numpy as np
 from PySide6.QtWidgets import QApplication, QDialog, QFileDialog, QWidget
 
+from app_io.legacy_keys import migrate_legacy_keys
 from dialogs.dialogs import PeriodInfo, SelectPeriodDialog, show_folder_summary, show_warning
 from utils.helper_funcs import restore_special_floats
 
@@ -368,14 +369,17 @@ def load_params_file(
 ) -> Optional[dict[str, Any]]:
     """Load a parameter JSON file for the selected source and period.
 
+    Legacy parameter keys from older files are renamed to their current
+    names (see ``migrate_legacy_keys``).
+
     Args:
         folder: Folder containing the parameter file.
         source: Source name used in the file name.
         selected_period: Optional period label.
 
     Returns:
-        Parsed JSON content with restored special floats, or ``None`` if the
-        parameter file does not exist.
+        Parsed JSON content with restored special floats and migrated keys,
+        or ``None`` if the parameter file does not exist.
     """
     folder = Path(folder)
 
@@ -389,7 +393,15 @@ def load_params_file(
         return None
 
     with params_path.open("r", encoding="utf-8") as f:
-        return restore_special_floats(json.load(f))
+        data = restore_special_floats(json.load(f))
+
+    data["params"] = {
+        velocity: migrate_legacy_keys(p)
+        for velocity, p in data.get("params", {}).items()
+    }
+    if "config" in data:
+        data["config"] = migrate_legacy_keys(data["config"])
+    return data
 
 
 def show_data_folder_summary(

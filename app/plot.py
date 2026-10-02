@@ -352,8 +352,8 @@ class PlotCanvas(FigureCanvas):
 
         self._t_limits = t_limits
         self._flux_limits = (-1, 1)
-        self._cosh_peak_lines = [None] * self._n_axes
-        self._cosh_peak_spans = [None] * self._n_axes
+        self._current_center_lines = [None] * self._n_axes
+        self._current_spans = [None] * self._n_axes
 
         self._fig, self._axes = plt.subplots(**fig_main_kws)
         self._fig.subplots_adjust(**fig_margin_kws)
@@ -373,8 +373,8 @@ class PlotCanvas(FigureCanvas):
         for i in range(self._n_axes):
             ax = self._axes[i]
             self.add_ax_props(ax)
-            self._cosh_peak_lines[i] = ax.axvline(0.0, **axes_props["cosh_peak"]["line"], visible=False)
-            self._cosh_peak_spans[i] = ax.axvspan(0.0, 1.0, **axes_props["cosh_peak"]["span"], visible=False)
+            self._current_center_lines[i] = ax.axvline(0.0, **axes_props["current_span"]["line"], visible=False)
+            self._current_spans[i] = ax.axvspan(0.0, 1.0, **axes_props["current_span"]["span"], visible=False)
 
         super().__init__(self._fig)
         self.setParent(parent)
@@ -570,24 +570,27 @@ class PlotCanvas(FigureCanvas):
 
         self._axes[0].set_ylabel(rf"${label}\; (\mathrm{{{unit}}})$")
 
-    def set_cosh_peak_visible(self, visible: bool):
-        """Show or hide the cosh-peak marker on all axes.
+    def set_current_span_visible(self, visible: bool):
+        """Show or hide the selected-component highlight on all axes.
+
+        The highlight is the center line and shaded span of the currently
+        selected pulse or step.
 
         Args:
-            visible: Whether the marker should be visible.
+            visible: Whether the highlight should be visible.
         """
 
         for i in range(self._n_axes):
-            self._cosh_peak_lines[i].set_visible(visible)
-            self._cosh_peak_spans[i].set_visible(visible)
+            self._current_center_lines[i].set_visible(visible)
+            self._current_spans[i].set_visible(visible)
 
-    def set_cosh_peak_position(self, x0: float, wl: float, wr: float):
-        """Reposition the cosh-peak marker.
+    def set_current_span_position(self, x0: float, wl: float, wr: float):
+        """Reposition the selected-component highlight.
 
         Args:
-            x0: Peak center position.
-            wl: Left half-width.
-            wr: Right half-width.
+            x0: Center of the selected pulse or step.
+            wl: Left half-extent.
+            wr: Right half-extent.
         """
 
         if wl > 1.0e10:
@@ -597,9 +600,9 @@ class PlotCanvas(FigureCanvas):
         x_left = x0 - wl
         width = wl + wr
         for i in range(self._n_axes):
-            self._cosh_peak_lines[i].set_xdata([x0, x0])
-            self._cosh_peak_spans[i].set_x(x_left)
-            self._cosh_peak_spans[i].set_width(width)
+            self._current_center_lines[i].set_xdata([x0, x0])
+            self._current_spans[i].set_x(x_left)
+            self._current_spans[i].set_width(width)
 
     def set_time_grid(self, visible: bool, which: str):
         """Toggle the x-axis grid on both axes.

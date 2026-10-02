@@ -7,6 +7,9 @@ objects.
 
 from __future__ import annotations
 
+from ui.splash_screen import show_splash_message
+
+show_splash_message("Importing basic packages...")
 import copy
 import getpass
 import sys
@@ -15,10 +18,9 @@ from datetime import datetime
 from html import escape
 from pathlib import Path
 from typing import Any, Dict, Optional
-
 import numpy as np
 from PySide6.QtCore import QSize, Qt, QUrl
-from PySide6.QtGui import QCloseEvent, QDesktopServices
+from PySide6.QtGui import QCloseEvent, QDesktopServices, QAction, QKeySequence
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -30,17 +32,30 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+show_splash_message("Importing config packages / parameters tabs...")
 from app.parameter_tabs import ParameterTabsWidget
+
+show_splash_message("Importing config packages / plot...")
 from app.plot import PlotCanvas, PlotExporter
+
+show_splash_message("Importing config packages / settings manager...")
 from app.settings_manager import (
     LINE_COLOR_ACTION_PREFIX,
     RESET_LINE_COLORS_ACTION_ID,
     LineColorManager,
     Settings,
 )
+
+show_splash_message("Importing config packages / solver...")
 from app.solver_controller import SolverController
-from app.update_pipeline import DisplayedCurves, UpdatePipeline
+
+show_splash_message("Importing config packages / pipeline...")
+from app.update_pipeline import DisplayedCurves, UpdatePipeline, get_time_unit_scale
+
+show_splash_message("Importing config packages / velocity bar...")
 from app.velocity_bar_controller import VelocityBarController
+
+show_splash_message("Importing config packages / data I/O...")
 from app_io.data_io import (
     LightCurve,
     analyze_folder,
@@ -50,12 +65,16 @@ from app_io.data_io import (
     select_period_if_needed,
     show_data_folder_summary,
 )
+
+show_splash_message("Importing config packages / parameters I/O...")
 from app_io.parameter_io import (
     open_parameters,
     save_parameters,
     save_parameters_as,
     save_params_atomic,
 )
+
+show_splash_message("Importing config packages / dialogs...")
 from dialogs.dialogs import (
     AskResult,
     ask_question,
@@ -63,7 +82,9 @@ from dialogs.dialogs import (
     show_critical,
     show_information,
 )
-from paths import DOCUMENTATION_PATH, EQUATIONS_PDF_PATH, SETTINGS_FILE_PATH, USER_GUIDE_PATH
+
+show_splash_message("Importing config packages / paths...")
+from paths import EQUATIONS_PDF_PATH, SETTINGS_FILE_PATH, USER_GUIDE_PATH
 from settings.app_metadata import (
     APP_AUTHOR_EMAIL,
     APP_AUTHOR_GITHUB,
@@ -72,32 +93,21 @@ from settings.app_metadata import (
     APP_NAME,
     APP_VERSION,
 )
+
+show_splash_message("Importing config packages / style...")
 from settings.app_style import set_app_style
 from settings.ui_defaults import NATIVE_MENU_BAR
-from solver.maxwell_bloch_solver import solve_maxwell_bloch
-from ui.menu_bar_controller import QAction, QKeySequence, MenuBarController
-from ui.splash_screen import show_splash_message
+
+show_splash_message("Importing config packages / menu bar...")
+from ui.menu_bar_controller import MenuBarController
+
+show_splash_message("Importing config packages / status bar...")
 from ui.status_bar_controller import StatusBarController, StatusState
+
+show_splash_message("Importing config packages / helper functions...")
 from utils.helper_funcs import pretty_json, read_json, set_nested_bool_key, set_win_center
 from utils.solver_step_viewer import StepScatterWidget
 from utils.units import VELOCITY_UNIT_TEXT
-
-show_splash_message("Importing basic packages...")
-show_splash_message("Importing config packages / menu bar...")
-show_splash_message("Importing config packages / velocity bar...")
-show_splash_message("Importing config packages / plot...")
-show_splash_message("Importing config packages / parameters tabs...")
-show_splash_message("Importing config packages / status bar...")
-show_splash_message("Importing config packages / solver...")
-show_splash_message("Importing config packages / pipe line...")
-show_splash_message("Importing config packages / settings manager...")
-show_splash_message("Importing config packages / recent folders...")
-show_splash_message("Importing config packages / data I/O...")
-show_splash_message("Importing config packages / parameters I/O...")
-show_splash_message("Importing config packages / dialogs...")
-show_splash_message("Importing config packages / paths...")
-show_splash_message("Importing config packages / style...")
-show_splash_message("Importing config packages / helper functions...")
 
 MENU_CHECKABLE_IDS = (
     "show_time_major_grid",
@@ -156,8 +166,8 @@ class MBESolverApp(QMainWindow):
 
         # ---- plain state ----
         self._fit_mode = False
-        self._show_cosh_peak = False
-        self._cosh_peak_path: Optional[str] = None
+        self._show_current_span = False
+        self._current_span_path: Optional[str] = None
         self._last_z_arr_length = -1
         self._step_viewer_window = None
 
@@ -213,7 +223,7 @@ class MBESolverApp(QMainWindow):
             get_fit_mode=lambda: self._fit_mode,
             set_chi_square=self._velocity_bar.set_chi_square,
             set_i_max=self._velocity_bar.set_i_max,
-            update_cosh_peak=self._update_cosh_peak,
+            update_current_span=self._update_current_span,
             redraw=self._canvas.redraw,
         )
 
@@ -244,8 +254,8 @@ class MBESolverApp(QMainWindow):
         self._velocity_bar.valueSaved.connect(self._on_velocity_saved)
         self._velocity_bar.valueUnsaved.connect(self._on_velocity_unsaved)
         self._parameter_tabs.valueChanged.connect(self._on_params_value_changed)
-        self._parameter_tabs.coshPeakChanged.connect(self._on_cosh_peak_changed)
-        self._parameter_tabs.showCoshPeak.connect(self._on_show_cosh_peak)
+        self._parameter_tabs.spanChanged.connect(self._on_span_changed)
+        self._parameter_tabs.showSpan.connect(self._on_show_span)
         self._bottom_plot_combo.currentIndexChanged.connect(
             lambda _: self._on_bottom_plot_changed()
         )
@@ -253,10 +263,10 @@ class MBESolverApp(QMainWindow):
         self._factory_default_params = self._parameter_tabs.get_value()
 
         saved_defaults = self._settings.load_saved_app_defaults()
-        if saved_defaults is not None:
-            config, params = saved_defaults
-            self._parameter_tabs.set_config(copy.deepcopy(config))
-            self._parameter_tabs.set_value(copy.deepcopy(params))
+        # if saved_defaults is not None:
+        #     config, params = saved_defaults
+        #     self._parameter_tabs.set_config(copy.deepcopy(config))
+        #     self._parameter_tabs.set_value(copy.deepcopy(params))
 
         self._status_bar.set_state(StatusState.READY)
         self._set_fit_mode(False)
@@ -453,43 +463,44 @@ class MBESolverApp(QMainWindow):
             self._handle_checkable_menu_action(action_id, checked, persist=False, redraw=False)
         self._canvas.redraw()
 
-    # ---- Cosh peak ----
-    def _update_cosh_peak(self) -> None:
-        """Reposition and show or hide the cosh-peak marker on the canvas."""
-        if self._cosh_peak_path is None:
+    # ---- Current span ----
+    def _update_current_span(self) -> None:
+        """Reposition and show or hide the current span marker on the canvas."""
+        if self._current_span_path is None:
             return
         if self._solver.is_solving:
             return
 
         params = self._solver.current_params
-        cosh_values = params[self._cosh_peak_path]
-        symmetric = cosh_values["symmetric"]
-        idx = cosh_values["current_idx"]
-        amplitude = cosh_values["a"][idx]
-        x0 = cosh_values["x0"][idx]
+        current_span_values = params[self._current_span_path]
+        if isinstance(current_span_values, float):
+            self._canvas.set_current_span_visible(False)
+            return
+        symmetric = current_span_values["symmetric"]
+        idx = current_span_values["current_idx"]
+        x0 = current_span_values["x0"][idx]
 
-        if amplitude == 0:
-            wl = wr = 0.0
-        elif symmetric:
-            wl = wr = cosh_values["w"][idx] / 2.0
+        if symmetric:
+            wl = wr = current_span_values["w"][idx]
         else:
-            wl = cosh_values["wl"][idx]
-            wr = cosh_values["wr"][idx]
+            wl = current_span_values["wl"][idx]
+            wr = current_span_values["wr"][idx]
 
         if self._fit_mode:
-            from app.update_pipeline import get_time_unit_scale
             scale = get_time_unit_scale(params)
             x0 = params["results.offset.time"] + x0 * scale
             wl *= scale
             wr *= scale
 
-        self._canvas.set_cosh_peak_position(x0, wl, wr)
-        cat = self._cosh_peak_path.split(".")[1]
+        self._canvas.set_current_span_position(x0, wl / 2.0, wr / 2.0)
+        cat = self._current_span_path.split(".")[1]
         in_correct_tab = (
-            (cat == "bcs" and self._bottom_plot == "A0")
-            or (cat == "pump" and self._bottom_plot == "lambda_n")
+                (cat == "bcs" and self._bottom_plot == "A0")
+                or (cat == "pump" and self._bottom_plot == "lambda_n")
+                or (cat == "t1" and self._bottom_plot == "t1")
+                or (cat == "t2" and self._bottom_plot == "t2")
         )
-        self._canvas.set_cosh_peak_visible(self._show_cosh_peak and in_correct_tab)
+        self._canvas.set_current_span_visible(self._show_current_span and in_correct_tab)
 
     # ---- Solver callback ----
     def _on_solve_finished(self, results: dict) -> None:
@@ -499,7 +510,7 @@ class MBESolverApp(QMainWindow):
             results: Solver-result mapping returned by the background solve.
         """
         self._results = results
-        self._pipeline.request(plot=True, cosh_peak=True)
+        self._pipeline.request(plot=True, current_span=True)
 
     # ---- Menu spec & rebuild ----
     def _build_menu_spec(self) -> dict[str, Any]:
@@ -554,7 +565,6 @@ class MBESolverApp(QMainWindow):
             ],
             "Help": [
                 {"id": "open_user_guide", "text": "User Guide", "shortcut": QKeySequence.HelpContents},
-                {"id": "open_documentation", "text": "Documentation"},
                 {"id": "sep"},
                 {"id": "show_about_dialog", "text": "About This App"},
                 {"id": "show_about_qt", "text": "About Qt"},
@@ -610,7 +620,6 @@ class MBESolverApp(QMainWindow):
             "show_data_summary": self._show_data_information,
             "open_equations_pdf": self._open_equations_pdf,
             "open_solver_step_viewer": self._open_solver_step_viewer,
-            "open_documentation": self._open_documentation,
             "open_user_guide": self._open_user_guide,
             "show_about_dialog": self._show_about_dialog,
             "show_about_qt": self._show_about_qt,
@@ -879,12 +888,12 @@ class MBESolverApp(QMainWindow):
         return True
 
     def _handle_checkable_menu_action(
-        self,
-        action_id: str,
-        checked: bool,
-        *,
-        persist: bool = True,
-        redraw: bool = True,
+            self,
+            action_id: str,
+            checked: bool,
+            *,
+            persist: bool = True,
+            redraw: bool = True,
     ) -> bool:
         """Handle a persistent checkable menu action.
 
@@ -958,14 +967,6 @@ class MBESolverApp(QMainWindow):
         self._step_viewer_window = None
 
     # ---- Help menu ----
-    def _open_documentation(self) -> None:
-        """Open the generated HTML documentation in the system browser."""
-        self._open_path(
-            DOCUMENTATION_PATH,
-            "Documentation",
-            "No documentation output was found in the project.",
-        )
-
     def _open_user_guide(self) -> None:
         """Open the user guide PDF."""
         self._open_path(USER_GUIDE_PATH, "User Guide", "user_guide.pdf not found.")
@@ -1066,7 +1067,7 @@ class MBESolverApp(QMainWindow):
         for i in range(self._bottom_plot_combo.count()):
             data = self._bottom_plot_combo.itemData(i)
             self._parameter_tabs.show_widget(f"display.range.{data}", data == bottom_plot)
-        self._pipeline.request(plot=True, cosh_peak=True)
+        self._pipeline.request(plot=True, current_span=True)
 
     def _on_params_value_changed(self, path: str, value: Any) -> None:
         """Route a parameter-widget change to the appropriate update tasks.
@@ -1110,23 +1111,23 @@ class MBESolverApp(QMainWindow):
 
         self._pipeline.update()
 
-    def _on_cosh_peak_changed(self, path: str) -> None:
-        """Handle a change in the active cosh-peak parameter group.
+    def _on_span_changed(self, path: str) -> None:
+        """Handle a change in the active current span parameter group.
 
         Args:
-            path: Path to the active cosh-peak parameter group.
+            path: Path to the active current span parameter group.
         """
-        self._cosh_peak_path = path
-        self._pipeline.request(cosh_peak=True)
+        self._current_span_path = path
+        self._pipeline.request(current_span=True)
 
-    def _on_show_cosh_peak(self, show: bool) -> None:
-        """Handle a change in the cosh-peak visibility state.
+    def _on_show_span(self, show: bool) -> None:
+        """Handle a change in the current span visibility state.
 
         Args:
-            show: Whether the cosh peak should be visible.
+            show: Whether the current span should be visible.
         """
-        self._show_cosh_peak = show
-        self._pipeline.request(cosh_peak=True)
+        self._show_current_span = show
+        self._pipeline.request(current_span=True)
 
     # ---- Close ----
     def closeEvent(self, event: QCloseEvent) -> None:

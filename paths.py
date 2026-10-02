@@ -31,9 +31,6 @@ DOCS_DIR = ROOT_DIR / "docs"
 EQUATIONS_PDF_PATH = DOCS_DIR / "equations_reference.pdf"
 """Path to the equations reference PDF."""
 
-DOCUMENTATION_PATH = DOCS_DIR / "api" / "index.html"
-"""Path to the generated API documentation index page."""
-
 USER_GUIDE_PATH = DOCS_DIR / "user_guide.pdf"
 """Path to the user guide PDF."""
 

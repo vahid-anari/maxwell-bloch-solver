@@ -6,10 +6,11 @@ import json
 import os
 import tempfile
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Dict
 
 from PySide6.QtWidgets import QFileDialog, QWidget
 
+from app_io.legacy_keys import migrate_legacy_keys
 from dialogs.dialogs import show_critical
 from utils.helper_funcs import restore_special_floats
 
@@ -39,12 +40,16 @@ def save_params_atomic(params_text: str, path: Path) -> None:
 def open_parameters(parent: QWidget) -> Optional[dict[str, Any]]:
     """Load a parameter snapshot chosen by the user.
 
+    Files saved in fit mode are rejected. Legacy parameter keys from older
+    files are renamed to their current names (see ``migrate_legacy_keys``).
+
     Args:
         parent: Parent widget for the file dialog and error dialogs.
 
     Returns:
-        Mapping containing the selected file path and parsed parameter data, or
-        ``None`` if the dialog is canceled or loading fails.
+        Mapping with keys ``path`` (the selected file) and ``params`` (the
+        parsed file content), or ``None`` if the dialog is canceled, the file
+        is a fit-mode file, or loading fails.
     """
 
     fname, _ = QFileDialog.getOpenFileName(
@@ -55,23 +60,42 @@ def open_parameters(parent: QWidget) -> Optional[dict[str, Any]]:
     )
 
     if not fname:
-        return
+        return None
 
     path = Path(fname)
     try:
         with path.open("r", encoding="utf-8") as f:
             params = json.load(f)
-        meta = params.get("metadata", {})
-        if meta.get("fit_mode", True):
-            show_critical("Import Parameters Failed", "This file is not a parameter file.", parent=parent)
-            return
+
+        meta = params.get("metadata")
+        if not isinstance(meta, dict) or "fit_mode" not in meta:
+            show_critical(
+                "Import Parameters Failed",
+                "This file is not a recognized parameter file.",
+                parent=parent,
+            )
+            return None
+
+        if meta["fit_mode"]:
+            show_critical(
+                "Import Parameters Failed",
+                "This file contains fit parameters saved with a data folder.\n"
+                "Use File \u2192 Open Data Folder\u2026 to load it together with its data.",
+                parent=parent,
+            )
+            return None
     except Exception as e:
         show_critical("Import Parameters Failed", str(e), parent=parent)
-        return
+        return None
+
+    params = restore_special_floats(params)
+    params["params"] = migrate_legacy_keys(params.get("params", {}))
+    if "config" in params:
+        params["config"] = migrate_legacy_keys(params["config"])
 
     return {
         "path": path,
-        "params": restore_special_floats(params),
+        "params": params,
     }
 
 
@@ -155,7 +179,7 @@ def _demo_main() -> int:
                 json.dumps(
                     {
                         "metadata": {
-                            "_fit_mode": False,
+                            "fit_mode": False,
                         },
                         "params": {
                             "a": 1,

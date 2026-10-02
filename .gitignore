@@ -6,6 +6,10 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 
+# Numba cache (if written outside __pycache__)
+*.nbi
+*.nbc
+
 # Virtual environments
 .venv/
 venv/

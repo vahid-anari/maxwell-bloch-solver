@@ -33,7 +33,7 @@
       "linestyle": "--",
       "linewidth": 0.75
     },
-    "cosh_peak": {
+    "current_span": {
       "line": {
         "color": "r",
         "linestyle": "-",
@@ -104,7 +104,7 @@
         "unit": "-",
         "combo_label": "w",
         "props": {
-          "color": "m",
+          "color": "magenta",
           "linestyle": "-",
           "linewidth": 1.25
         }
@@ -114,7 +114,7 @@
         "unit": "\\Lambda_0",
         "combo_label": "Λₙ",
         "props": {
-          "color": "c",
+          "color": "cyan",
           "linestyle": "-",
           "linewidth": 1.25
         }
@@ -125,6 +125,26 @@
         "combo_label": "A|z=0",
         "props": {
           "color": "orange",
+          "linestyle": "-",
+          "linewidth": 1.25
+        }
+      },
+      "t1": {
+        "label": "T_1",
+        "unit": "T_0",
+        "combo_label": "T₁",
+        "props": {
+          "color": "forestgreen",
+          "linestyle": "-",
+          "linewidth": 1.25
+        }
+      },
+      "t2": {
+        "label": "T_2",
+        "unit": "T_0",
+        "combo_label": "T₂",
+        "props": {
+          "color": "yellowgreen",
           "linestyle": "-",
           "linewidth": 1.25
         }
@@ -336,45 +356,231 @@
         }
       }
     },
-    "dynamics": {
+    "t1": {
       "props": {
-        "label": "Dynamics",
-        "groups": [
-          {
-            "id": "relaxation_dephasing",
-            "label": "Relaxation && Dephasing",
-            "orientation": "v",
-            "widgets": [
-              "t1",
-              "t2"
-            ]
-          }
-        ]
+        "label": "T₁"
       },
       "widgets": {
-        "t1": {
-          "label": "T_1",
-          "type": "float-slider",
-          "path": "solve.dynamics.t1",
-          "unit": "T_0",
-          "min_val": 1,
-          "max_val": 100,
-          "init_val": 45,
-          "val_fmt": "{:.3S}",
-          "min_limit": 0,
-          "min_limit_inclusive": false
-        },
-        "t2": {
-          "label": "T_2",
-          "type": "float-slider",
-          "path": "solve.dynamics.t2",
-          "unit": "T_0",
-          "min_val": 1,
-          "max_val": 30,
-          "init_val": 8,
-          "val_fmt": "{:.3S}",
-          "min_limit": 0,
-          "min_limit_inclusive": false
+        "step": {
+          "type": "step",
+          "path": "solve.t1",
+          "f": "T_1",
+          "x": "\\tau",
+          "symmetric": true,
+          "arr_length": 1,
+          "current_idx": 0,
+          "y": {
+            "label": "T_1",
+            "html_label": "T<sub>1</sub>",
+            "unit": "T_0",
+            "min_val": 1.0,
+            "max_val": 100.0,
+            "init_vals": [
+              45.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": 0,
+            "min_limit_inclusive": false,
+            "max_limit": 1e100,
+            "max_limit_inclusive": false
+          },
+          "x0": {
+            "label": "\\tau_0",
+            "html_label": "τ<sub>0</sub>",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 300.0,
+            "init_vals": [
+              65.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": 0.0,
+            "min_limit_inclusive": true,
+            "max_limit": 1e100,
+            "max_limit_inclusive": false
+          },
+          "w": {
+            "label": "w",
+            "html_label": "w",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 20.0,
+            "init_vals": [
+              10.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": 0.0,
+            "min_limit_inclusive": true
+          },
+          "wl": {
+            "label": "w_l",
+            "html_label": "w<sub>l</sub>",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 10.0,
+            "init_vals": [
+              1.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": 0.0,
+            "min_limit_inclusive": true
+          },
+          "wr": {
+            "label": "w_r",
+            "html_label": "w<sub>r</sub>",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 10.0,
+            "init_vals": [
+              1.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": 0.0,
+            "min_limit_inclusive": true
+          },
+          "xp": {
+            "label": "\\tau_p",
+            "html_label": "τ<sub>p</sub>",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 300.0,
+            "init_vals": 250.0,
+            "val_fmt": "{:.3S}",
+            "min_limit": 0.0,
+            "min_limit_inclusive": true,
+            "max_limit": 1e100,
+            "max_limit_inclusive": false
+          },
+          "same_w": {
+            "label": "Use Same w",
+            "checked": false
+          },
+          "same_wl": {
+            "label": "Use Same wₗ",
+            "checked": false
+          },
+          "same_wr": {
+            "label": "Use Same wᵣ",
+            "checked": false
+          },
+          "use_xp": {
+            "label": "Use τₚ",
+            "checked": false
+          }
+        }
+      }
+    },
+    "t2": {
+      "props": {
+        "label": "T₂"
+      },
+      "widgets": {
+        "step": {
+          "type": "step",
+          "path": "solve.t2",
+          "f": "T_2",
+          "x": "\\tau",
+          "symmetric": true,
+          "arr_length": 1,
+          "current_idx": 0,
+          "y": {
+            "label": "T_2",
+            "html_label": "T<sub>2</sub>",
+            "unit": "T_0",
+            "min_val": 1.0,
+            "max_val": 30.0,
+            "init_vals": [
+              8.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": 0,
+            "min_limit_inclusive": false,
+            "max_limit": 1e100,
+            "max_limit_inclusive": false
+          },
+          "x0": {
+            "label": "\\tau_0",
+            "html_label": "τ<sub>0</sub>",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 300.0,
+            "init_vals": [
+              65.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": 0.0,
+            "min_limit_inclusive": true,
+            "max_limit": 1e100,
+            "max_limit_inclusive": false
+          },
+          "w": {
+            "label": "w",
+            "html_label": "w",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 20.0,
+            "init_vals": [
+              10.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": 0.0,
+            "min_limit_inclusive": true
+          },
+          "wl": {
+            "label": "w_l",
+            "html_label": "w<sub>l</sub>",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 10.0,
+            "init_vals": [
+              1.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": 0.0,
+            "min_limit_inclusive": true
+          },
+          "wr": {
+            "label": "w_r",
+            "html_label": "w<sub>r</sub>",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 10.0,
+            "init_vals": [
+              1.0
+            ],
+            "val_fmt": "{:.3S}",
+            "min_limit": 0.0,
+            "min_limit_inclusive": true
+          },
+          "xp": {
+            "label": "\\tau_p",
+            "html_label": "τ<sub>p</sub>",
+            "unit": "T_0",
+            "min_val": 0.0,
+            "max_val": 300.0,
+            "init_vals": 250.0,
+            "val_fmt": "{:.3S}",
+            "min_limit": 0.0,
+            "min_limit_inclusive": true,
+            "max_limit": 1e100,
+            "max_limit_inclusive": false
+          },
+          "same_w": {
+            "label": "Use Same w",
+            "checked": false
+          },
+          "same_wl": {
+            "label": "Use Same wₗ",
+            "checked": false
+          },
+          "same_wr": {
+            "label": "Use Same wᵣ",
+            "checked": false
+          },
+          "use_xp": {
+            "label": "Use τₚ",
+            "checked": false
+          }
         }
       }
     },
@@ -398,8 +604,8 @@
         "label": "BCs"
       },
       "widgets": {
-        "cosh": {
-          "type": "cosh",
+        "pulse": {
+          "type": "pulse",
           "path": "solve.bcs",
           "f": "A\\vert_{z=0}",
           "x": "\\tau",
@@ -516,9 +722,9 @@
         "label": "Pump 1"
       },
       "widgets": {
-        "cosh": {
-          "type": "cosh",
-          "path": "solve.pump.cosh1",
+        "pulse": {
+          "type": "pulse",
+          "path": "solve.pump.pulse1",
           "f": "\\Lambda_n^{(1)}",
           "x": "\\tau",
           "symmetric": true,
@@ -634,9 +840,9 @@
         "label": "Pump 2"
       },
       "widgets": {
-        "cosh": {
-          "type": "cosh",
-          "path": "solve.pump.cosh2",
+        "pulse": {
+          "type": "pulse",
+          "path": "solve.pump.pulse2",
           "f": "\\Lambda_n^{(2)}",
           "x": "\\tau",
           "symmetric": true,
@@ -856,7 +1062,9 @@
               "flux",
               "w",
               "lambda_n",
-              "A0"
+              "A0",
+              "t1",
+              "t2"
             ]
           }
         ]
@@ -922,6 +1130,32 @@
           "type": "range-slider",
           "label": "A\\vert_{z=0}",
           "path": "display.range.A0",
+          "min_val": -10.0,
+          "max_val": 10.0,
+          "use_margins": true,
+          "margins": [
+            10,
+            10
+          ],
+          "val_fmt": "{:.3S}"
+        },
+        "t1": {
+          "type": "range-slider",
+          "label": "T_1",
+          "path": "display.range.t1",
+          "min_val": -10.0,
+          "max_val": 10.0,
+          "use_margins": true,
+          "margins": [
+            10,
+            10
+          ],
+          "val_fmt": "{:.3S}"
+        },
+        "t2": {
+          "type": "range-slider",
+          "label": "T_2",
+          "path": "display.range.t2",
           "min_val": -10.0,
           "max_val": 10.0,
           "use_margins": true,

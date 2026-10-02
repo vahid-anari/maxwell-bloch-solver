@@ -41,6 +41,8 @@ class SolverResultsDisplay:
     w: np.ndarray = field(default_factory=lambda: np.empty(0))
     lambda_n: np.ndarray = field(default_factory=lambda: np.empty(0))
     A0: np.ndarray = field(default_factory=lambda: np.empty(0))
+    t1: np.ndarray = field(default_factory=lambda: np.empty(0))
+    t2: np.ndarray = field(default_factory=lambda: np.empty(0))
 
 
 @dataclass
@@ -66,7 +68,8 @@ class UpdateTasks:
         units: Whether axis labels and displayed units need refreshing.
         range: Whether axis ranges need recomputing.
         chi_square: Whether the chi-square display needs recomputing.
-        cosh_peak: Whether the cosh-peak marker needs refreshing.
+        current_span: Whether the highlighted span of the selected pulse or
+            step needs refreshing.
     """
 
     data: bool = False
@@ -74,7 +77,7 @@ class UpdateTasks:
     units: bool = False
     range: bool = False
     chi_square: bool = False
-    cosh_peak: bool = False
+    current_span: bool = False
 
     def clear(self) -> None:
         """Reset all update-task flags to ``False``."""
@@ -170,7 +173,7 @@ class UpdatePipeline:
         get_fit_mode: Callable[[], bool],
         set_chi_square: Callable[[Optional[float]], None],
         set_i_max: Callable[[Optional[float]], None],
-        update_cosh_peak: Callable[[], None],
+        update_current_span: Callable[[], None],
         redraw: Callable[[], None],
     ) -> None:
         """Initialize the update pipeline.
@@ -183,7 +186,7 @@ class UpdatePipeline:
             get_bottom_plot: Callable returning the active bottom-panel curve ID.
             get_fit_mode: Callable returning whether fit mode is active.
             set_chi_square: Callback used to update the chi-square display.
-            update_cosh_peak: Callback that refreshes the cosh-peak marker.
+            update_current_span: Callback that refreshes the cosh-peak marker.
             redraw: Callable that triggers a canvas redraw.
         """
         self._canvas = canvas
@@ -194,7 +197,7 @@ class UpdatePipeline:
         self._get_fit_mode = get_fit_mode
         self._set_chi_square = set_chi_square
         self._set_i_max = set_i_max
-        self._update_cosh_peak = update_cosh_peak
+        self._update_current_span = update_current_span
         self._redraw = redraw
 
         self.tasks = UpdateTasks()
@@ -258,8 +261,8 @@ class UpdatePipeline:
         if tasks.units:
             self._update_units(params)
 
-        if tasks.cosh_peak:
-            self._update_cosh_peak()
+        if tasks.current_span:
+            self._update_current_span()
 
         self._is_updating = False
         canvas.redraw()
@@ -303,6 +306,8 @@ class UpdatePipeline:
         w = results["w"][z_index]
         lambda_n = results["lambda_n"]
         A0 = results["A0"]
+        t1 = results["t1"]
+        t2 = results["t2"]
 
         if fit_mode:
             time = params["results.offset.time"] + time * get_time_unit_scale(params)
@@ -318,11 +323,15 @@ class UpdatePipeline:
         self.displayed_curves.results.w = w
         self.displayed_curves.results.lambda_n = lambda_n
         self.displayed_curves.results.A0 = A0
+        self.displayed_curves.results.t1 = t1
+        self.displayed_curves.results.t2 = t2
 
         canvas.set_flux(time, intensity)
         canvas.set_bottom_curve_data("w", time, w)
         canvas.set_bottom_curve_data("lambda_n", time, lambda_n)
         canvas.set_bottom_curve_data("A0", time, A0)
+        canvas.set_bottom_curve_data("t1", time, t1)
+        canvas.set_bottom_curve_data("t2", time, t2)
 
         if bottom_plot:
             canvas.show_bottom_curve(bottom_plot)

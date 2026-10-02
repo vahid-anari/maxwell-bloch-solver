@@ -27,7 +27,8 @@ from PySide6.QtWidgets import (
 )
 
 from settings.ui_defaults import SLIDER_SHOW_RANGE
-from ui.params.cosh_function import CoshFunctionWidget
+from ui.params.pulse_function import PulseFunctionWidget
+from ui.params.step_function import StepFunctionWidget
 from ui.params.initial_conditions import InitialConditionsWidget
 from ui.params.parameter_combo_box import ParameterComboBox
 from ui.params.parameter_line_edit import ParameterLineEdit
@@ -93,8 +94,8 @@ class ParameterTabsWidget(QTabWidget):
 
     valueChanged = Signal(str, object)
     configChanged = Signal(str, object)
-    coshPeakChanged = Signal(str)
-    showCoshPeak = Signal(bool)
+    spanChanged = Signal(str)
+    showSpan = Signal(bool)
 
     def __init__(self, tabs_cfg: Dict[str, Any]) -> None:
         """Initialize the parameter-tabs widget.
@@ -109,7 +110,7 @@ class ParameterTabsWidget(QTabWidget):
         self._widgets_by_path: Dict[str, ParameterWidgetBase] = {}
         self._value = {}
         self._config = {}
-        self._tabs_with_cosh: Dict[int, str] = {}
+        self._tabs_with_span: Dict[int, str] = {}
         self._fit_tab_index = None
 
         self.setTabsClosable(False)
@@ -129,15 +130,15 @@ class ParameterTabsWidget(QTabWidget):
                 path = w_ctx.get("path", "")
                 if path:
                     self._widgets_by_path[path] = w
-                    emit_peak_changed = False
-                    if isinstance(w, CoshFunctionWidget):
-                        self._tabs_with_cosh[idx] = path
-                        emit_peak_changed = True
+                    emit_span_changed = False
+                    if isinstance(w, PulseFunctionWidget) or isinstance(w, StepFunctionWidget):
+                        self._tabs_with_span[idx] = path
+                        emit_span_changed = True
                     w.valueChanged.connect(
-                        lambda val, p=path, emit=emit_peak_changed: self._on_value_changed(
+                        lambda val, p=path, emit=emit_span_changed: self._on_value_changed(
                             path=p,
                             value=val,
-                            emit_peak_changed=emit,
+                            emit_span_changed=emit,
                         )
                     )
 
@@ -236,8 +237,10 @@ class ParameterTabsWidget(QTabWidget):
                 init_R0=widget_ctx.get("init_R0", 1.0e-8),
                 val_fmt=widget_ctx.get("val_fmt", "{:.3S}"),
             )
-        if w_type == "cosh":
-            return CoshFunctionWidget(params_props=widget_ctx, parent=self)
+        if w_type == "pulse":
+            return PulseFunctionWidget(params_props=widget_ctx, parent=self)
+        if w_type == "step":
+            return StepFunctionWidget(params_props=widget_ctx, parent=self)
         if w_type == "combo-box":
             return ParameterComboBox(
                 label=w_label,
@@ -299,18 +302,18 @@ class ParameterTabsWidget(QTabWidget):
             w.set_name_width(name_w)
             w.set_value_width(val_w)
 
-    def _on_value_changed(self, path: str, value: Any, emit_peak_changed: bool = False) -> None:
+    def _on_value_changed(self, path: str, value: Any, emit_span_changed: bool = False) -> None:
         """Cache a new widget value and emit the related signals.
 
         Args:
             path: Widget path identifier.
             value: New widget value.
-            emit_peak_changed: Whether to emit ``coshPeakChanged`` as well.
+            emit_span_changed: Whether to emit ``coshPeakChanged`` as well.
         """
 
         self._value[path] = value
-        if emit_peak_changed:
-            self.coshPeakChanged.emit(path)
+        if emit_span_changed:
+            self.spanChanged.emit(path)
         self.valueChanged.emit(path, value)
 
     def _on_config_changed(self, path: str, config: Dict[str, Any]) -> None:
@@ -331,12 +334,12 @@ class ParameterTabsWidget(QTabWidget):
             tab_idx: New active tab index.
         """
 
-        if tab_idx in self._tabs_with_cosh.keys():
-            path = self._tabs_with_cosh[tab_idx]
-            self.coshPeakChanged.emit(path)
-            self.showCoshPeak.emit(True)
+        if tab_idx in self._tabs_with_span.keys():
+            path = self._tabs_with_span[tab_idx]
+            self.spanChanged.emit(path)
+            self.showSpan.emit(True)
         else:
-            self.showCoshPeak.emit(False)
+            self.showSpan.emit(False)
 
     def get_config(self) -> Dict[str, float]:
         """Return a deep copy of the full widget-configuration mapping.

@@ -393,6 +393,7 @@ def set_nested_bool_key(obj, key_name, value=True):
         key_name: Key name to search for.
         value: Value to assign after converting with ``bool``.
     """
+
     if isinstance(obj, dict):
         for k, v in obj.items():
             if k == key_name:

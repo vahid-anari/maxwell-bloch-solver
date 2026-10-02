@@ -5,7 +5,7 @@ from __future__ import annotations
 APP_NAME = "Maxwell Bloch Solver"
 """Human-readable application name."""
 
-APP_VERSION = "8.4"
+APP_VERSION = "8.5"
 """Application version string."""
 
 APP_AUTHOR_NAME = "Vahid Anari"
