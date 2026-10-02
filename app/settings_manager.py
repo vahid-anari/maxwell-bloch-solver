@@ -16,6 +16,7 @@ from PySide6.QtCore import QSettings
 from PySide6.QtGui import QColor, QIcon, QPixmap
 from PySide6.QtWidgets import QColorDialog
 
+from app_io.legacy_keys import migrate_legacy_keys
 from utils.helper_funcs import pretty_json, restore_special_floats
 
 if TYPE_CHECKING:
@@ -113,6 +114,9 @@ class Settings:
     def load_saved_app_defaults(self) -> tuple[dict, dict] | None:
         """Load saved application defaults from QSettings.
 
+        Legacy parameter keys from older saved defaults are renamed to their
+        current names (see ``migrate_legacy_keys``).
+
         Returns:
             Tuple ``(config, params)`` if saved defaults exist, otherwise
             ``None``.
@@ -122,12 +126,11 @@ class Settings:
         if not config_text or not params_text:
             return None
         try:
-            return (
-                self._deserialize_from_settings(config_text),
-                self._deserialize_from_settings(params_text),
-            )
+            config = self._deserialize_from_settings(config_text)
+            params = self._deserialize_from_settings(params_text)
         except Exception:
             return None
+        return migrate_legacy_keys(config), migrate_legacy_keys(params)
 
     def save_as_app_default(self, params_tab_widget: "ParameterTabsWidget") -> Tuple[bool, str]:
         """Save current parameter values and config as new application defaults.

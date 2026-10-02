@@ -263,10 +263,10 @@ class MBESolverApp(QMainWindow):
         self._factory_default_params = self._parameter_tabs.get_value()
 
         saved_defaults = self._settings.load_saved_app_defaults()
-        # if saved_defaults is not None:
-        #     config, params = saved_defaults
-        #     self._parameter_tabs.set_config(copy.deepcopy(config))
-        #     self._parameter_tabs.set_value(copy.deepcopy(params))
+        if saved_defaults is not None:
+            config, params = saved_defaults
+            self._parameter_tabs.set_config(copy.deepcopy(config))
+            self._parameter_tabs.set_value(copy.deepcopy(params))
 
         self._status_bar.set_state(StatusState.READY)
         self._set_fit_mode(False)
