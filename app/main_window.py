@@ -270,6 +270,8 @@ class MBESolverApp(QMainWindow):
                 self._parameter_tabs.set_value(copy.deepcopy(params))
             except ValueError as e:
                 print(f"Saved defaults invalid, using built-in defaults: {e}")
+                self._parameter_tabs.set_config(copy.deepcopy(self._factory_default_config))
+                self._parameter_tabs.set_value(copy.deepcopy(self._factory_default_params))
 
         self._status_bar.set_state(StatusState.READY)
         self._set_fit_mode(False)
