@@ -265,8 +265,11 @@ class MBESolverApp(QMainWindow):
         saved_defaults = self._settings.load_saved_app_defaults()
         if saved_defaults is not None:
             config, params = saved_defaults
-            self._parameter_tabs.set_config(copy.deepcopy(config))
-            self._parameter_tabs.set_value(copy.deepcopy(params))
+            try:
+                self._parameter_tabs.set_config(copy.deepcopy(config))
+                self._parameter_tabs.set_value(copy.deepcopy(params))
+            except ValueError as e:
+                print(f"Saved defaults invalid, using built-in defaults: {e}")
 
         self._status_bar.set_state(StatusState.READY)
         self._set_fit_mode(False)
