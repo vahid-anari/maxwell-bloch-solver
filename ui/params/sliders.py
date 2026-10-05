@@ -89,13 +89,13 @@ def _map_pos_to_val(p: int, p_min: int, p_max: int, v_min: float, v_max: float) 
 
 
 def make_line_edit(
-    value_is_int: bool,
-    init_value: TNum,
-    fmt: str,
-    min_limit: TNum,
-    max_limit: TNum,
-    min_limit_inclusive: bool,
-    max_limit_inclusive: bool,
+        value_is_int: bool,
+        init_value: TNum,
+        fmt: str,
+        min_limit: TNum,
+        max_limit: TNum,
+        min_limit_inclusive: bool,
+        max_limit_inclusive: bool,
 ) -> NumericLineEdit:
     """Create a numeric line edit configured for a slider-editing dialog.
 
@@ -155,12 +155,12 @@ class MarkerOverlay(QWidget):
     """
 
     def __init__(
-        self,
-        slider: QSlider,
-        value_fn: Callable[[], int],
-        *,
-        thickness: int = 2,
-        color: QColor | str = Qt.red,
+            self,
+            slider: QSlider,
+            value_fn: Callable[[], int],
+            *,
+            thickness: int = 2,
+            color: QColor | str = Qt.red,
     ):
         """Initialize the marker overlay.
 
@@ -207,10 +207,10 @@ class MarkerOverlay(QWidget):
             Result of the base-class event filter.
         """
         if obj is self._slider and ev.type() in (
-            QEvent.Resize,
-            QEvent.Show,
-            QEvent.Hide,
-            QEvent.EnabledChange,
+                QEvent.Resize,
+                QEvent.Show,
+                QEvent.Hide,
+                QEvent.EnabledChange,
         ):
             self._sync_geometry()
             self.update()
@@ -268,19 +268,19 @@ class EditConfigDialog(QDialog, Generic[TNum]):
     """Dialog for editing slider range, format, and range-label visibility."""
 
     def __init__(
-        self,
-        slider_name: str,
-        value_is_int: bool,
-        min_val: TNum,
-        max_val: TNum,
-        val_fmt: str,
-        min_limit: TNum | None,
-        max_limit: TNum | None,
-        min_limit_inclusive: bool,
-        max_limit_inclusive: bool,
-        show_range: bool = True,
-        show_range_enabled: bool = True,
-        parent: Optional[QWidget] = None,
+            self,
+            slider_name: str,
+            value_is_int: bool,
+            min_val: TNum,
+            max_val: TNum,
+            val_fmt: str,
+            min_limit: TNum | None,
+            max_limit: TNum | None,
+            min_limit_inclusive: bool,
+            max_limit_inclusive: bool,
+            show_range: bool = True,
+            show_range_enabled: bool = True,
+            parent: Optional[QWidget] = None,
     ):
         """Initialize the configuration-editing dialog.
 
@@ -382,16 +382,16 @@ class SetValueDialog(QDialog, Generic[TNum]):
     """Dialog for entering a new slider value."""
 
     def __init__(
-        self,
-        slider_name: str,
-        value_is_int: bool,
-        current_value: TNum,
-        val_fmt: str,
-        min_limit: TNum | None,
-        max_limit: TNum | None,
-        min_limit_inclusive: bool,
-        max_limit_inclusive: bool,
-        parent: Optional[QWidget] = None,
+            self,
+            slider_name: str,
+            value_is_int: bool,
+            current_value: TNum,
+            val_fmt: str,
+            min_limit: TNum | None,
+            max_limit: TNum | None,
+            min_limit_inclusive: bool,
+            max_limit_inclusive: bool,
+            parent: Optional[QWidget] = None,
     ):
         """Initialize the value-entry dialog.
 
@@ -464,16 +464,16 @@ class LabeledSliderBase(ParameterWidgetBase[TNum], Generic[TNum]):
     """Base widget combining a label, slider, value label, and optional range labels."""
 
     def __init__(
-        self,
-        label: str,
-        unit: str,
-        min_val: TNum,
-        max_val: TNum,
-        init_val: TNum,
-        orientation: Qt.Orientation,
-        val_fmt: str,
-        show_range: bool,
-        parent: Optional[QWidget],
+            self,
+            label: str,
+            unit: str,
+            min_val: TNum,
+            max_val: TNum,
+            init_val: TNum,
+            orientation: Qt.Orientation,
+            val_fmt: str,
+            show_range: bool,
+            parent: Optional[QWidget],
     ):
         """Initialize the labeled slider base widget.
 
@@ -1007,23 +1007,25 @@ class LabeledSliderBase(ParameterWidgetBase[TNum], Generic[TNum]):
 class NumericSliderBase(LabeledSliderBase[TNum], Generic[TNum]):
     """Base class for editable numeric sliders."""
 
+    _SPECIAL_ITEM_IDS = {"+inf": "set_to_pos_inf", "-inf": "set_to_neg_inf"}
+
     def __init__(
-        self,
-        label: str,
-        unit: str,
-        value_is_int: bool,
-        min_val: TNum,
-        max_val: TNum,
-        init_val: float | int | str,
-        val_fmt: str,
-        min_limit: TNum | None,
-        max_limit: TNum | None,
-        min_limit_inclusive: bool,
-        max_limit_inclusive: bool,
-        orientation: Qt.Orientation,
-        editable: bool,
-        show_range: bool,
-        parent: Optional[QWidget],
+            self,
+            label: str,
+            unit: str,
+            value_is_int: bool,
+            min_val: TNum,
+            max_val: TNum,
+            init_val: float | int | str,
+            val_fmt: str,
+            min_limit: TNum | None,
+            max_limit: TNum | None,
+            min_limit_inclusive: bool,
+            max_limit_inclusive: bool,
+            orientation: Qt.Orientation,
+            editable: bool,
+            show_range: bool,
+            parent: Optional[QWidget],
     ):
         """Initialize the numeric slider base class.
 
@@ -1044,6 +1046,8 @@ class NumericSliderBase(LabeledSliderBase[TNum], Generic[TNum]):
             show_range: Whether range labels and ticks should be shown.
             parent: Optional parent widget.
         """
+
+        self._special_allowed = {"+inf": True, "-inf": True}
         init_special = normalize_special_value(init_val)
         if init_special is not None:
             init_val = max_val if init_special == "+inf" else min_val
@@ -1059,7 +1063,6 @@ class NumericSliderBase(LabeledSliderBase[TNum], Generic[TNum]):
             show_range=show_range,
             parent=parent,
         )
-
         self._min_limit = min_limit
         self._max_limit = max_limit
         self._min_limit_inclusive = min_limit_inclusive
@@ -1202,8 +1205,8 @@ class NumericSliderBase(LabeledSliderBase[TNum], Generic[TNum]):
         for item_id in ("set_value", "edit_config", "reset_to_default", "save_as_default"):
             self._set_right_click_item_enabled(item_id, not in_special)
 
-        self._set_right_click_item_enabled("set_to_pos_inf", True)
-        self._set_right_click_item_enabled("set_to_neg_inf", True)
+        self._set_right_click_item_enabled("set_to_pos_inf", self._special_allowed["+inf"])
+        self._set_right_click_item_enabled("set_to_neg_inf", self._special_allowed["-inf"])
 
     def _update_value_label(self) -> None:
         """Refresh the value label, including special infinity markers."""
@@ -1323,10 +1326,10 @@ class NumericSliderBase(LabeledSliderBase[TNum], Generic[TNum]):
         self.set_range(new_min, new_max)
         self._update_layout()
         if (
-            old_min != self._min_value
-            or old_max != self._max_value
-            or old_fmt != self._val_fmt
-            or old_show_range != self._show_range
+                old_min != self._min_value
+                or old_max != self._max_value
+                or old_fmt != self._val_fmt
+                or old_show_range != self._show_range
         ):
             self.configChanged.emit(self.get_config())
 
@@ -1621,26 +1624,62 @@ class NumericSliderBase(LabeledSliderBase[TNum], Generic[TNum]):
         """
         self.set_range(self._min_value, max_val)
 
+    def set_special_value_allowed(self, mode: str, allowed: bool) -> None:
+        """Allow or forbid a special-value context-menu action.
+
+        If the slider is currently in the forbidden mode, it leaves it.
+
+        Args:
+            mode: Special mode, ``"+inf"`` or ``"-inf"``.
+            allowed: Whether the action may be enabled.
+        """
+        if mode not in self._SPECIAL_ITEM_IDS:
+            raise ValueError(f"unknown special mode: {mode!r}")
+        self._special_allowed[mode] = bool(allowed)
+        if not allowed and self._current_special_value == mode:
+            self._exit_special_mode()
+        self._sync_special_menu_state()
+
+    def is_special_value_allowed(self, mode: str) -> bool:
+        """Return whether a special-value action is allowed.
+
+        Args:
+            mode: Special mode, ``"+inf"`` or ``"-inf"``.
+
+        Returns:
+            ``True`` if the action may be enabled.
+        """
+        return self._special_allowed.get(mode, False)
+
+    def get_special_value(self) -> Optional[SpecialValue]:
+        """Return the active special value.
+
+        Returns:
+            ``"+inf"`` or ``"-inf"`` if the slider is in special mode,
+            otherwise ``None``.
+        """
+        return self._current_special_value
+
 
 class IntSlider(NumericSliderBase[int]):
     """Integer-valued slider whose QSlider range matches the numeric range directly."""
 
     def __init__(
-        self,
-        label: str,
-        min_val: int,
-        max_val: int,
-        unit: str = "",
-        init_val: Optional[int] = None,
-        val_fmt: str = "{:d}",
-        min_limit: int | None = None,
-        max_limit: int | None = None,
-        min_limit_inclusive: bool = True,
-        max_limit_inclusive: bool = True,
-        show_range: bool = True,
-        orientation: Qt.Orientation = Qt.Horizontal,
-        editable: bool = True,
-        parent: Optional[QWidget] = None,
+            self,
+            label: str,
+            min_val: int,
+            max_val: int,
+            unit: str = "",
+            init_val: Optional[int] = None,
+            val_fmt: str = "{:d}",
+            min_limit: int | None = None,
+            max_limit: int | None = None,
+            min_limit_inclusive: bool = True,
+            max_limit_inclusive: bool = True,
+            show_range: bool = True,
+            orientation: Qt.Orientation = Qt.Horizontal,
+            editable: bool = True,
+            parent: Optional[QWidget] = None,
     ):
         """Initialize the integer slider.
 
@@ -1744,22 +1783,22 @@ class FloatSlider(NumericSliderBase[float]):
     """Float-valued slider backed by an integer QSlider with piecewise mapping."""
 
     def __init__(
-        self,
-        label: str,
-        min_val: float,
-        max_val: float,
-        unit: str = "",
-        init_val: Optional[float | str] = None,
-        val_fmt: str = "{:.3f}",
-        min_limit: float | None = None,
-        max_limit: float | None = None,
-        min_limit_inclusive: bool = True,
-        max_limit_inclusive: bool = True,
-        steps: int = 1_000_000,
-        show_range: bool = True,
-        orientation: Qt.Orientation = Qt.Horizontal,
-        editable: bool = True,
-        parent: Optional[QWidget] = None,
+            self,
+            label: str,
+            min_val: float,
+            max_val: float,
+            unit: str = "",
+            init_val: Optional[float | str] = None,
+            val_fmt: str = "{:.3f}",
+            min_limit: float | None = None,
+            max_limit: float | None = None,
+            min_limit_inclusive: bool = True,
+            max_limit_inclusive: bool = True,
+            steps: int = 1_000_000,
+            show_range: bool = True,
+            orientation: Qt.Orientation = Qt.Horizontal,
+            editable: bool = True,
+            parent: Optional[QWidget] = None,
     ):
         """Initialize the float slider.
 
@@ -1930,13 +1969,13 @@ class ArrEditConfigDialog(QDialog):
     """Dialog for editing array-slider length, format, and range visibility."""
 
     def __init__(
-        self,
-        slider_name: str,
-        arr_length: int,
-        val_fmt: str,
-        show_range: bool = True,
-        show_range_enabled: bool = True,
-        parent: Optional[QWidget] = None,
+            self,
+            slider_name: str,
+            arr_length: int,
+            val_fmt: str,
+            show_range: bool = True,
+            show_range_enabled: bool = True,
+            parent: Optional[QWidget] = None,
     ):
         """Initialize the array-slider configuration dialog.
 
@@ -2008,17 +2047,17 @@ class ArraySlider(LabeledSliderBase[float]):
     """Slider that selects an index from a stored numeric array."""
 
     def __init__(
-        self,
-        label: str,
-        arr_length: int,
-        unit: str = "",
-        min_val: float = 0.0,
-        max_val: float = 1.0,
-        init_index: int = 0,
-        orientation: Qt.Orientation = Qt.Horizontal,
-        val_fmt: str = "{:.2f}",
-        show_range: bool = True,
-        parent: Optional[QWidget] = None,
+            self,
+            label: str,
+            arr_length: int,
+            unit: str = "",
+            min_val: float = 0.0,
+            max_val: float = 1.0,
+            init_index: int = 0,
+            orientation: Qt.Orientation = Qt.Horizontal,
+            val_fmt: str = "{:.2f}",
+            show_range: bool = True,
+            parent: Optional[QWidget] = None,
     ) -> None:
         """Initialize the array slider.
 

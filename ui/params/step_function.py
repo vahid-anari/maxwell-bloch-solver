@@ -7,7 +7,6 @@ import numbers
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
-from numba import njit
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPalette
 from PySide6.QtWidgets import (
@@ -30,9 +29,9 @@ from settings.ui_defaults import SLIDER_SHOW_RANGE
 from ui.labels import SvgLabel
 from ui.params.multi_variable_slider import MultiVariableSlider
 from ui.params.parameter_widget_base import ParameterWidgetBase
-from ui.params.sliders import FloatSlider
+from ui.params.sliders import FloatSlider, SpecialValue
 from utils.helper_funcs import make_box
-
+from dialogs.dialogs import AskResult, ask_question
 
 
 
@@ -58,6 +57,7 @@ class StepFunctionWidget(ParameterWidgetBase):
 
         super().__init__(parent)
 
+        self._applying_value = False
         self._symmetric = params_props.get("symmetric", True)
         self._arr_length = params_props.get("arr_length", 1)
         self._current_idx = params_props.get("current_idx", 0)
@@ -375,6 +375,7 @@ class StepFunctionWidget(ParameterWidgetBase):
         """
 
         self._constant_mode = constant_mode
+        self._y_slider.set_special_value_allowed("+inf", constant_mode)
         self._update_visibility()
 
     def _update_slider_states(self) -> None:
@@ -510,6 +511,56 @@ class StepFunctionWidget(ParameterWidgetBase):
         </table>
         """
 
+    def _confirm_leave_special_value(self, arr_length: int) -> bool:
+        """Ask before leaving constant mode while the level is infinite.
+
+        Steps need finite levels, so increasing N from 1 while the level is
+        +inf or -inf resets it to a finite value. If the user cancels, N is
+        restored to 1.
+
+        Args:
+            arr_length: Requested number of levels.
+
+        Returns:
+            ``True`` if the change may proceed, otherwise ``False``.
+        """
+        sv = self._y_slider.get_special_value()
+        if self._applying_value or not self._constant_mode or arr_length == 1 or sv is None:
+            return True
+
+        result = ask_question(
+            "Infinite Value",
+            f"The level is currently {sv}.",
+            "Steps need finite levels, so it will be set to the slider's "
+            f"{'maximum' if sv == '+inf' else 'minimum'}. Continue?",
+            yes_btn_label="Continue",
+            cancel_btn_label="Cancel",
+            parent=self,
+        )
+        if result == AskResult.YES:
+            self._replace_infinite_level(sv)
+            return True
+
+        self._arr_length_sb.blockSignals(True)
+        try:
+            self._arr_length_sb.setValue(1)
+        finally:
+            self._arr_length_sb.blockSignals(False)
+        return False
+
+    def _replace_infinite_level(self, sv: SpecialValue) -> None:
+        """Replace the infinite constant level with a finite range limit.
+
+        Args:
+            sv: Active special value, ``"+inf"`` or ``"-inf"``.
+        """
+        y = self._y_slider
+        y.set_special_value_allowed(sv, False)
+
+        levels = np.array(y.get_arr_values(), dtype=float)
+        levels[0] = y.get_max_value() if sv == "+inf" else y.get_min_value()
+        y.set_arr_values(levels)
+
     # ----- update slider width -----
     def _update_sliders_name_width(self) -> None:
         """Synchronize all slider name widths to the widest slider label."""
@@ -608,10 +659,13 @@ class StepFunctionWidget(ParameterWidgetBase):
             arr_length: New number of levels N (N = 1 is constant mode).
         """
 
-        self._set_constant_mode(arr_length == 1)
+        if not self._confirm_leave_special_value(arr_length):
+            return
+
         self._arr_length = arr_length
         self._set_current_idx_items(arr_length)
         self._set_sliders_arr_length(arr_length)
+        self._set_constant_mode(arr_length == 1)
         self._update_slider_states()
 
     def _on_current_idx_changed(self, idx: int) -> None:
@@ -856,9 +910,11 @@ def _demo_main() -> int:
         "y": {
             "label": "T_1",
             "html_label": "T<sub>1</sub>",
-            "min_val": 0.0,
+            "min_val": 1.0,
             "max_val": 10.0,
             "init_vals": np.linspace(1.0, 2.0, N),
+            "min_limit": 0,
+            "min_limit_inclusive": False
         },
         "x0": {
             "label": r"\tau_0",

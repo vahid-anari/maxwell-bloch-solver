@@ -380,9 +380,7 @@
             ],
             "val_fmt": "{:.3S}",
             "min_limit": 0,
-            "min_limit_inclusive": false,
-            "max_limit": 1e100,
-            "max_limit_inclusive": false
+            "min_limit_inclusive": false
           },
           "x0": {
             "label": "\\tau_0",
@@ -494,9 +492,7 @@
             ],
             "val_fmt": "{:.3S}",
             "min_limit": 0,
-            "min_limit_inclusive": false,
-            "max_limit": 1e100,
-            "max_limit_inclusive": false
+            "min_limit_inclusive": false
           },
           "x0": {
             "label": "\\tau_0",
