@@ -31,6 +31,7 @@ from ui.params.pulse_function import PulseFunctionWidget
 from ui.params.step_function import StepFunctionWidget
 from ui.params.initial_conditions import InitialConditionsWidget
 from ui.params.parameter_combo_box import ParameterComboBox
+from ui.params.parameter_toggle import ParameterToggle
 from ui.params.parameter_line_edit import ParameterLineEdit
 from ui.params.parameter_widget_base import ParameterWidgetBase
 from ui.params.range_sliders import FloatRangeSlider
@@ -247,6 +248,14 @@ class ParameterTabsWidget(QTabWidget):
                 items=widget_ctx.get("items", []),
                 parent=self,
             )
+        if w_type == "toggle":
+            return ParameterToggle(
+                text=widget_ctx.get("text", ""),
+                label_on=widget_ctx.get("label_on"),
+                label_off=widget_ctx.get("label_off"),
+                checked=widget_ctx.get("checked", True),
+                parent=self,
+            )
         if w_type == "line-edit":
             return ParameterLineEdit(
                 label=w_label,
@@ -298,6 +307,7 @@ class ParameterTabsWidget(QTabWidget):
         for w in self._widgets_by_tabs[tab_id].values():
             n_w, v_w = w.get_name_width(), w.get_value_width()
             name_w, val_w = max(name_w, n_w), max(val_w, v_w)
+
         for w in self._widgets_by_tabs[tab_id].values():
             w.set_name_width(name_w)
             w.set_value_width(val_w)

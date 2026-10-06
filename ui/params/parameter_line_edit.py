@@ -100,16 +100,6 @@ class ParameterLineEdit(ParameterWidgetBase[Num]):
 
         self._line_edit.set_value(self._parse(value))
 
-    def set_value_width(self, width: int) -> None:
-        """Keep API compatibility for layouts that set a value width explicitly."""
-
-        pass
-
-    def set_name_width(self, width: int) -> None:
-        """Keep API compatibility for layouts that set a name width explicitly."""
-
-        pass
-
 
 def _demo_main() -> int:
     """Run this module as a standalone demo."""

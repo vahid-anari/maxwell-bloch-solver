@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget, QHBoxLayout
 
 from ui.labels import SvgLabel
 from ui.params.parameter_widget_base import ParameterWidgetBase
@@ -91,12 +91,9 @@ class InitialConditionsWidget(ParameterWidgetBase[dict]):
         slider_g.toggled.connect(self._update_check_state)
         self._slider_g = slider_g
 
-        main_layout = QVBoxLayout(self)
-        main_layout.addStretch(1)
+        main_layout = QHBoxLayout(self)
         main_layout.addWidget(theta0_g)
-        main_layout.addStretch(1)
-        main_layout.addWidget(slider_g)
-        main_layout.addStretch(1)
+        main_layout.addWidget(slider_g, 1)
         self._update_layout()
 
     def _update_layout(self) -> None:

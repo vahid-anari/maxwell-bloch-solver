@@ -95,8 +95,8 @@ class UpdateTasks:
 # ---------------------------------------------------------------------------
 
 def compute_chi_square(
-    display: DisplayedCurves,
-    x_limits: tuple[float, float],
+        display: DisplayedCurves,
+        x_limits: tuple[float, float],
 ) -> float:
     """Compute a reduced chi-square-like mismatch over the visible data range.
 
@@ -164,17 +164,16 @@ class UpdatePipeline:
     """Own the update-task flags and run the ordered UI refresh sequence."""
 
     def __init__(
-        self,
-        canvas: "PlotCanvas",
-        get_params: Callable[[], dict[str, Any]],
-        get_results: Callable[[], dict],
-        get_current_data: Callable[[], LightCurve],
-        get_bottom_plot: Callable[[], Optional[str]],
-        get_fit_mode: Callable[[], bool],
-        set_chi_square: Callable[[Optional[float]], None],
-        set_i_max: Callable[[Optional[float]], None],
-        update_current_span: Callable[[], None],
-        redraw: Callable[[], None],
+            self,
+            canvas: "PlotCanvas",
+            get_params: Callable[[], dict[str, Any]],
+            get_results: Callable[[], dict],
+            get_current_data: Callable[[], LightCurve],
+            get_bottom_plot: Callable[[], Optional[str]],
+            get_fit_mode: Callable[[], bool],
+            set_chi_square: Callable[[Optional[float]], None],
+            update_current_span: Callable[[], None],
+            redraw: Callable[[], None],
     ) -> None:
         """Initialize the update pipeline.
 
@@ -196,7 +195,6 @@ class UpdatePipeline:
         self._get_bottom_plot = get_bottom_plot
         self._get_fit_mode = get_fit_mode
         self._set_chi_square = set_chi_square
-        self._set_i_max = set_i_max
         self._update_current_span = update_current_span
         self._redraw = redraw
 
@@ -228,6 +226,18 @@ class UpdatePipeline:
         for name, value in task_flags.items():
             setattr(self.tasks, name, value)
         self.update()
+
+    def current_intensity_max(self) -> float:
+        """Return max(I_result) of the latest solution at the current z slice.
+
+        Returns:
+            Peak raw solver intensity, or ``0.0`` if no results are available.
+        """
+        results = self._get_results()
+        if not results:
+            return 0.0
+        z_index = self._get_params()["slice.z"]["index"]
+        return float(np.max(results["intensity"][z_index]))
 
     def update(self) -> None:
         """Flush all pending update tasks in dependency order."""
@@ -311,12 +321,12 @@ class UpdatePipeline:
 
         if fit_mode:
             time = params["results.offset.time"] + time * get_time_unit_scale(params)
-            imax = np.max(intensity)
-            self._set_i_max(imax)
-            if imax != 0:
-                intensity = intensity * params["results.scale.intensity"] / imax
-        else:
-            self._set_i_max(None)
+            scale = params["results.scale.intensity"]
+            if params["results.scale.normalize"]:
+                imax = np.max(intensity)
+                if imax != 0:
+                    scale /= imax
+            intensity = intensity * scale
 
         self.displayed_curves.results.time = time
         self.displayed_curves.results.intensity = intensity

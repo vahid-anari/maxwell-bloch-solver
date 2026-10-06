@@ -108,6 +108,7 @@ show_splash_message("Importing config packages / helper functions...")
 from utils.helper_funcs import pretty_json, read_json, set_nested_bool_key, set_win_center
 from utils.solver_step_viewer import StepScatterWidget
 from utils.units import VELOCITY_UNIT_TEXT
+from app_io.legacy_keys import merge_onto_defaults
 
 MENU_CHECKABLE_IDS = (
     "show_time_major_grid",
@@ -222,7 +223,6 @@ class MBESolverApp(QMainWindow):
             get_bottom_plot=lambda: self._bottom_plot,
             get_fit_mode=lambda: self._fit_mode,
             set_chi_square=self._velocity_bar.set_chi_square,
-            set_i_max=self._velocity_bar.set_i_max,
             update_current_span=self._update_current_span,
             redraw=self._canvas.redraw,
         )
@@ -261,17 +261,7 @@ class MBESolverApp(QMainWindow):
         )
 
         self._factory_default_params = self._parameter_tabs.get_value()
-
-        saved_defaults = self._settings.load_saved_app_defaults()
-        if saved_defaults is not None:
-            config, params = saved_defaults
-            try:
-                self._parameter_tabs.set_config(copy.deepcopy(config))
-                self._parameter_tabs.set_value(copy.deepcopy(params))
-            except ValueError as e:
-                print(f"Saved defaults invalid, using built-in defaults: {e}")
-                self._parameter_tabs.set_config(copy.deepcopy(self._factory_default_config))
-                self._parameter_tabs.set_value(copy.deepcopy(self._factory_default_params))
+        self._apply_saved_defaults()
 
         self._status_bar.set_state(StatusState.READY)
         self._set_fit_mode(False)
@@ -327,6 +317,29 @@ class MBESolverApp(QMainWindow):
             combo.setItemIcon(i, LineColorManager.make_color_icon(color))
 
     # ---- Other helpers ----
+    def _apply_saved_defaults(self) -> None:
+        """Load user-saved defaults, falling back to factory defaults if invalid."""
+
+        saved = self._settings.load_saved_app_defaults()
+        if saved is None:
+            return
+
+        config, params = saved
+        config = merge_onto_defaults(self._factory_default_config, config)
+        params = merge_onto_defaults(self._factory_default_params, params)
+        try:
+            self._parameter_tabs.set_config(config)
+            self._parameter_tabs.set_value(params)
+        except (ValueError, TypeError, KeyError) as e:
+            print(f"Saved defaults invalid, using built-in defaults: {e}")
+            self._reset_to_factory_defaults()
+
+    def _reset_to_factory_defaults(self) -> None:
+        """Restore the parameter tabs to the built-in configuration and values."""
+
+        self._parameter_tabs.set_config(copy.deepcopy(self._factory_default_config))
+        self._parameter_tabs.set_value(copy.deepcopy(self._factory_default_params))
+
     def _can_leave(self) -> bool:
         """Return whether it is safe to discard the current state.
 
@@ -467,6 +480,22 @@ class MBESolverApp(QMainWindow):
             self._menu_bar.set_checked(action_id, checked)
             self._handle_checkable_menu_action(action_id, checked, persist=False, redraw=False)
         self._canvas.redraw()
+
+    def _rescale_intensity_for_normalize(self, normalize: bool) -> None:
+        """Adjust I_scale so the plotted curve is unchanged when toggling normalization.
+
+        Args:
+            normalize: New state of the normalize checkbox.
+        """
+
+        imax = self._pipeline.current_intensity_max()
+        if not imax:
+            return
+
+        widget = self._parameter_tabs.get_widget("results.scale.intensity")
+        old = widget.get_value()
+        new = old * imax if normalize else old / imax
+        self._parameter_tabs.set_value({"results.scale.intensity": new})
 
     # ---- Current span ----
     def _update_current_span(self) -> None:
@@ -1100,7 +1129,10 @@ class MBESolverApp(QMainWindow):
             else:
                 tasks.plot = True
 
+
         elif category == "results":
+            if path == "results.scale.normalize":
+                self._rescale_intensity_for_normalize(bool(value))
             tasks.plot = True
 
         elif category == "data":
@@ -1138,10 +1170,14 @@ class MBESolverApp(QMainWindow):
     def closeEvent(self, event: QCloseEvent) -> None:
         """Handle the Qt close event and guard against unsaved changes.
 
+        Stops the solver thread before accepting, so it is not destroyed
+        while still running.
+
         Args:
             event: Qt close event.
         """
         if self._can_leave():
+            self._solver.shutdown()
             event.accept()
         else:
             event.ignore()

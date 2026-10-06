@@ -108,31 +108,6 @@ class ParameterComboBox(ParameterWidgetBase[str]):
             raise ValueError(f"No combo item found for text={value!r}")
         self._combo.setCurrentIndex(idx)
 
-    def set_value_width(self, width: int) -> None:
-        """Keep API compatibility for callers that explicitly set value width.
-
-        Args:
-            width: Requested value width in pixels.
-
-        Note:
-            This widget does not use a separate value-width setting, so the
-            argument is accepted only for interface compatibility.
-        """
-
-        _ = width
-
-    def set_name_width(self, width: int) -> None:
-        """Keep API compatibility for callers that explicitly set name width.
-
-        Args:
-            width: Requested name width in pixels.
-
-        Note:
-            This widget manages its own name width, so the argument is accepted
-            only for interface compatibility.
-        """
-
-        _ = width
 
 
 def _demo_main() -> int:

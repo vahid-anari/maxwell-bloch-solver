@@ -82,13 +82,6 @@ class VelocityBarController(QWidget):
         set_widget_width(l, 8)
         self._chi_square_value_label = l
 
-        self._i_max_label = SvgLabel(r"I_{\mathrm{max}}=")
-        l = QLabel("")
-        l.setObjectName("chi_value")
-        set_widget_width(l, 8)
-        self._i_max_value_label = l
-        self._i_0_label = SvgLabel(r"I_0")
-
         self._prev_btn.clicked.connect(self._on_prev_btn_clicked)
         self._next_btn.clicked.connect(self._on_next_btn_clicked)
         self._save_btn.clicked.connect(self._on_save_btn_clicked)
@@ -145,10 +138,6 @@ class VelocityBarController(QWidget):
         self._add_space(toolbar, 10)
         toolbar.addWidget(self._chi_square_label)
         toolbar.addWidget(self._chi_square_value_label)
-        self._add_space(toolbar, 10)
-        toolbar.addWidget(self._i_max_label)
-        toolbar.addWidget(self._i_max_value_label)
-        toolbar.addWidget(self._i_0_label)
         self._toolbar = toolbar
 
     def _add_space(self, tb: QToolBar, width: int, add_sep: bool = True) -> None:
@@ -368,21 +357,14 @@ class VelocityBarController(QWidget):
         is_dirty = (v == self._dirty_value) if v is not None else False
         has_values = len(self._all_values) > 0
         has_saved = len(self._saved_values) > 0
-        if has_values:
-            self._i_0_label.set_text("I_0")
-        else:
+        if not has_values:
             self._chi_square_value_label.setText("")
-            self._i_max_value_label.setText("")
-            self._i_0_label.set_text(" ")
 
         self._velocity_label.setEnabled(has_values)
         self._combo.setEnabled(has_values)
         self._velocity_unit_label.setEnabled(has_values)
         self._chi_square_label.setEnabled(has_values)
         self._chi_square_value_label.setEnabled(has_values)
-        self._i_max_label.setEnabled(has_values)
-        self._i_max_value_label.setEnabled(has_values)
-        self._i_0_label.setEnabled(has_values)
         self._show_saved_cb.setEnabled(has_saved)
         self._prev_btn.setEnabled(total > 0 and idx > 0)
         self._next_btn.setEnabled(total > 0 and idx < total - 1)
@@ -459,15 +441,6 @@ class VelocityBarController(QWidget):
 
         text = value_to_text(chi_square, "{:.3S}") if chi_square is not None else ""
         self._chi_square_value_label.setText(text)
-
-    def set_i_max(self, i_max: Optional[float] = None) -> None:
-        """Update I_max display label.
-
-        Args:
-            i_max: Value to display, or ``None`` to clear the label.
-        """
-        text = value_to_text(i_max, "{:.3S}") if i_max is not None else ""
-        self._i_max_value_label.setText(text)
 
     def set_modified(self, modified: bool = True) -> None:
         """Mark the current velocity as modified or clean.

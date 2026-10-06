@@ -147,3 +147,11 @@ class SolverController(QObject):
         """Handle thread shutdown and start any queued solve request."""
         if self._has_pending:
             self.solve()
+
+    def shutdown(self) -> None:
+        """Stop the worker thread and wait for it to finish."""
+
+        thread = self._thread
+        if thread is not None and thread.isRunning():
+            thread.quit()
+            thread.wait()

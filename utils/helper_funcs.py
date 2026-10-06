@@ -462,7 +462,7 @@ def make_row(row_props: Dict[str, Any], widgets: Dict[str, QWidget]) -> QHBoxLay
     layout = QHBoxLayout()
     groups = row_props.get("groups", [])
     for g in groups:
-        layout.addWidget(make_group(g, widgets))
+        layout.addWidget(make_group(g, widgets), g.get("stretch", 0))
 
     return layout
 
