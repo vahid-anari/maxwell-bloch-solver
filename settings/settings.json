@@ -1157,8 +1157,8 @@
           "type": "toggle",
           "path": "results.scale.normalize",
           "text": "Normalize to max",
-          "label_on": "F = I_\\mathrm{res} / \\max(I_\\mathrm{res}) \\times I_\\mathrm{scale}",
-          "label_off": "F = I_\\mathrm{res} \\times I_\\mathrm{scale}",
+          "label_on": "F = I_\\mathrm{scale}\\, I / I_\\mathrm{max}",
+          "label_off": "F = I_\\mathrm{scale}\\, I",
           "checked": true
         }
       }
