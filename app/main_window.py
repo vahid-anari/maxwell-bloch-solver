@@ -19,7 +19,7 @@ from html import escape
 from pathlib import Path
 from typing import Any, Dict, Optional
 import numpy as np
-from PySide6.QtCore import QSize, Qt, QUrl
+from PySide6.QtCore import QSize, Qt, QUrl, QTimer
 from PySide6.QtGui import QCloseEvent, QDesktopServices, QAction, QKeySequence
 from PySide6.QtWidgets import (
     QApplication,
@@ -55,6 +55,9 @@ from app.update_pipeline import DisplayedCurves, UpdatePipeline, get_time_unit_s
 show_splash_message("Importing config packages / velocity bar...")
 from app.velocity_bar_controller import VelocityBarController
 
+show_splash_message("Importing config packages / update checker...")
+from app.update_checker import UpdateChecker
+
 show_splash_message("Importing config packages / data I/O...")
 from app_io.data_io import (
     LightCurve,
@@ -81,6 +84,7 @@ from dialogs.dialogs import (
     show_about_dialog,
     show_critical,
     show_information,
+    show_warning
 )
 
 show_splash_message("Importing config packages / paths...")
@@ -237,6 +241,9 @@ class MBESolverApp(QMainWindow):
             get_parameter_tabs_value=self._parameter_tabs.get_value,
         )
 
+        self._manual_update_check = False
+        self._update_checker = UpdateChecker(self)
+
         # ---- menu bar (needs coordinator objects ready) ----
         menu_spec = self._build_menu_spec()
         self._menu_bar = MenuBarController(self, menu_spec=menu_spec, native_menubar=NATIVE_MENU_BAR)
@@ -256,9 +263,10 @@ class MBESolverApp(QMainWindow):
         self._parameter_tabs.valueChanged.connect(self._on_params_value_changed)
         self._parameter_tabs.spanChanged.connect(self._on_span_changed)
         self._parameter_tabs.showSpan.connect(self._on_show_span)
-        self._bottom_plot_combo.currentIndexChanged.connect(
-            lambda _: self._on_bottom_plot_changed()
-        )
+        self._bottom_plot_combo.currentIndexChanged.connect(lambda _: self._on_bottom_plot_changed())
+        self._update_checker.updateAvailable.connect(self._on_update_available)
+        self._update_checker.upToDate.connect(self._on_up_to_date)
+        self._update_checker.checkFailed.connect(self._on_update_check_failed)
 
         self._factory_default_params = self._parameter_tabs.get_value()
         self._apply_saved_defaults()
@@ -274,6 +282,7 @@ class MBESolverApp(QMainWindow):
         self._solver.solve()
         self._status_bar.set_path_modified()
         self._on_bottom_plot_changed()
+        QTimer.singleShot(2000, self._update_checker.check)
 
     # ---- Layout ----
     def _make_layout(self) -> None:
@@ -600,6 +609,8 @@ class MBESolverApp(QMainWindow):
             "Help": [
                 {"id": "open_user_guide", "text": "User Guide", "shortcut": QKeySequence.HelpContents},
                 {"id": "sep"},
+                {"id": "check_for_updates", "text": "Check for Updates..."},
+                {"id": "sep"},
                 {"id": "show_about_dialog", "text": "About This App"},
                 {"id": "show_about_qt", "text": "About Qt"},
             ],
@@ -655,6 +666,7 @@ class MBESolverApp(QMainWindow):
             "open_equations_pdf": self._open_equations_pdf,
             "open_solver_step_viewer": self._open_solver_step_viewer,
             "open_user_guide": self._open_user_guide,
+            "check_for_updates": self._check_for_updates_manually,
             "show_about_dialog": self._show_about_dialog,
             "show_about_qt": self._show_about_qt,
         }
@@ -1029,6 +1041,65 @@ class MBESolverApp(QMainWindow):
     def _show_about_qt(self) -> None:
         """Show the built-in Qt About dialog."""
         QApplication.aboutQt()
+
+    # ------------------------------------------------------------------
+    # Update check
+    # ------------------------------------------------------------------
+    def _check_for_updates_manually(self) -> None:
+        """Run an update check from the Help menu and report every outcome."""
+
+        self._manual_update_check = True
+        self._update_checker.check()
+
+    def _on_update_available(self, latest: str, url: str) -> None:
+        """Tell the user a newer version exists and offer to download it.
+
+        Args:
+            latest: Latest version string found on GitHub.
+            url: Download URL for the latest version.
+        """
+
+        self._manual_update_check = False
+        result = ask_question(
+            title="Update Available",
+            text=f"<b>{APP_NAME} {latest}</b> is available.\nYou have version {APP_VERSION}.",
+            informative_text=(
+                "Download the new version now?\n"
+                "Unzip it and replace your current copy of the app."
+            ),
+            yes_btn_label="Download",
+            cancel_btn_label="Later",
+            parent=self,
+        )
+        if result == AskResult.YES:
+            QDesktopServices.openUrl(QUrl(url))
+
+    def _on_up_to_date(self) -> None:
+        """Confirm the current version, but only when the user asked."""
+
+        if self._manual_update_check:
+            show_information(
+                title="No Updates",
+                text=f"{APP_NAME} {APP_VERSION} is the latest version.",
+                parent=self,
+            )
+        self._manual_update_check = False
+
+    def _on_update_check_failed(self, message: str) -> None:
+        """Report a failed check, but only when the user asked.
+
+        Args:
+            message: Error description from the update checker.
+        """
+
+        if self._manual_update_check:
+            show_warning(
+                title="Update Check Failed",
+                text="Could not check for updates.",
+                informative_text=escape(message),
+                parent=self,
+            )
+        self._manual_update_check = False
 
     # ---- Signal handlers ----
     def _on_menu_action_triggered(self, _menu_id: str, action_id: str, checked: bool) -> None:

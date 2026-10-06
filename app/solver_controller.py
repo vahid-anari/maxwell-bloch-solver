@@ -7,6 +7,7 @@ overlapping solves.
 from __future__ import annotations
 
 from typing import Any, Callable
+from shiboken6 import isValid
 
 from PySide6.QtCore import QObject, QThread, Signal
 
@@ -74,6 +75,9 @@ class SolverController(QObject):
         self._is_solving = False
         self._has_pending = False
         self._current_params: dict[str, Any] = {}
+        self._thread: QThread | None = None
+        self._worker: SolverWorker | None = None
+        self._shutting_down = False
 
     # ------------------------------------------------------------------
     # Public interface
@@ -104,6 +108,8 @@ class SolverController(QObject):
         thread immediately. Instead, it marks a pending request so that another
         solve begins automatically after the current thread finishes.
         """
+        if self._shutting_down:
+            return
         if self._is_solving:
             self._has_pending = True
             return
@@ -144,14 +150,18 @@ class SolverController(QObject):
         self._on_finished(result)
 
     def _handle_thread_finished(self) -> None:
-        """Handle thread shutdown and start any queued solve request."""
-        if self._has_pending:
+        """Drop references to the finished thread and start any queued solve."""
+        self._thread = None
+        self._worker = None
+        if self._has_pending and not self._shutting_down:
             self.solve()
 
     def shutdown(self) -> None:
-        """Stop the worker thread and wait for it to finish."""
+        """Stop the worker thread, wait for it to finish, and block further solves."""
 
+        self._shutting_down = True
+        self._has_pending = False
         thread = self._thread
-        if thread is not None and thread.isRunning():
+        if thread is not None and isValid(thread) and thread.isRunning():
             thread.quit()
             thread.wait()
