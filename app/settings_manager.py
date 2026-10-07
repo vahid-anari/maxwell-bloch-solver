@@ -16,7 +16,7 @@ from PySide6.QtCore import QSettings
 from PySide6.QtGui import QColor, QIcon, QPixmap
 from PySide6.QtWidgets import QColorDialog
 
-from app_io.legacy_keys import migrate_legacy_keys
+from app_io.legacy_keys import migrate_legacy_params, migrate_legacy_config
 from utils.helper_funcs import pretty_json, restore_special_floats
 
 if TYPE_CHECKING:
@@ -38,9 +38,12 @@ VIEW_PREFERENCE_KEYS = {
     "show_time_minor_grid": "view/show_time_minor_grid",
     "show_flux_major_grid": "view/show_flux_major_grid",
     "show_flux_minor_grid": "view/show_flux_minor_grid",
+    "show_w_major_grid": "view/show_w_major_grid",
+    "show_w_minor_grid": "view/show_w_minor_grid",
     "show_bottom_major_grid": "view/show_bottom_major_grid",
     "show_bottom_minor_grid": "view/show_bottom_minor_grid",
     "show_slider_range_labels": "view/show_slider_range_labels",
+    "show_w": "view/show_w",
 }
 """Map view-action identifiers to their persisted QSettings keys."""
 
@@ -130,7 +133,7 @@ class Settings:
             params = self._deserialize_from_settings(params_text)
         except Exception:
             return None
-        return migrate_legacy_keys(config), migrate_legacy_keys(params)
+        return migrate_legacy_config(config), migrate_legacy_params(params)
 
     def save_as_app_default(self, params_tab_widget: "ParameterTabsWidget") -> Tuple[bool, str]:
         """Save current parameter values and config as new application defaults.
@@ -292,9 +295,10 @@ class LineColorManager:
             {"id": f"{LINE_COLOR_ACTION_PREFIX}data_points", "text": "Data Points..."},
             {"id": f"{LINE_COLOR_ACTION_PREFIX}flux", "text": "Flux..."},
             {"id": "sep"},
+            {"id": f"{LINE_COLOR_ACTION_PREFIX}w", "text": "w..."},
+            {"id": "sep"},
         ]
-        bottom_panel = self._default_lines_config.get("bottom_panel", {})
-        for name, props in bottom_panel.items():
+        for name, props in self._default_lines_config.get("bottom_panel", {}).items():
             text = props.get("combo_label") or props.get("label") or name
             items.append({"id": f"{LINE_COLOR_ACTION_PREFIX}{name}", "text": f"{text}..."})
 
@@ -330,10 +334,11 @@ class LineColorManager:
             color = top_panel.get(name, {}).get("props", {}).get("color")
             if color:
                 out[name] = str(color)
-        for name, item in lines.get("bottom_panel", {}).items():
-            color = item.get("props", {}).get("color")
-            if color:
-                out[name] = str(color)
+        for section in ("bottom_panel_right", "bottom_panel"):
+            for name, item in lines.get(section, {}).items():
+                color = item.get("props", {}).get("color")
+                if color:
+                    out[name] = str(color)
         return out
 
     def _settings_key(self, curve_id: str) -> str:

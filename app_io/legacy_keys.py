@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Dict
 import copy
 
-LEGACY_KEY_RENAMES = {
+LEGACY_KEY_RENAMES: Dict[str, str] = {
     "solve.dynamics.t1": "solve.t1",
     "solve.dynamics.t2": "solve.t2",
     "solve.pump.cosh1": "solve.pump.pulse1",
@@ -14,8 +14,18 @@ LEGACY_KEY_RENAMES = {
 }
 """Mapping from parameter keys used in older files to their current names."""
 
+ADDED_PARAM_DEFAULTS: Dict[str, Any] = {
+    "results.scale.normalize": True,
+}
+"""Parameter keys added in newer versions, with values reproducing old behaviour."""
 
-def migrate_legacy_keys(params: Dict[str, Any]) -> Dict[str, Any]:
+ADDED_CONFIG_DEFAULTS: Dict[str, Any] = {
+    "results.scale.normalize": {},
+}
+"""Config keys added in newer versions, with their default configuration."""
+
+
+def rename_legacy_keys(params: Dict[str, Any]) -> Dict[str, Any]:
     """Rename keys from older parameter files to their current names.
 
     If a mapping contains both the old and the new key, the new key wins.
@@ -32,6 +42,52 @@ def migrate_legacy_keys(params: Dict[str, Any]) -> Dict[str, Any]:
         if old in params and new not in migrated:
             migrated[new] = params[old]
     return migrated
+
+
+def add_missing_keys(mapping: Dict[str, Any], defaults: Dict[str, Any]) -> Dict[str, Any]:
+    """Add keys introduced in newer versions that older files do not contain.
+
+    Existing values are never overwritten.
+
+    Args:
+        mapping: Parameter or config mapping keyed by widget path.
+        defaults: Keys to add and their default values.
+
+    Returns:
+        New mapping with missing keys filled in.
+    """
+
+    migrated = dict(mapping)
+    for key, default in defaults.items():
+        if key not in migrated:
+            migrated[key] = copy.deepcopy(default)
+    return migrated
+
+
+def migrate_legacy_params(params: Dict[str, Any]) -> Dict[str, Any]:
+    """Bring a parameter mapping from an older file up to the current format.
+
+    Args:
+        params: Parameter mapping keyed by widget path.
+
+    Returns:
+        New, fully migrated mapping.
+    """
+
+    return add_missing_keys(rename_legacy_keys(params), ADDED_PARAM_DEFAULTS)
+
+
+def migrate_legacy_config(config: Dict[str, Any]) -> Dict[str, Any]:
+    """Bring a config mapping from an older file up to the current format.
+
+    Args:
+        config: Config mapping keyed by widget path.
+
+    Returns:
+        New, fully migrated mapping.
+    """
+
+    return add_missing_keys(rename_legacy_keys(config), ADDED_CONFIG_DEFAULTS)
 
 
 def merge_onto_defaults(base: Dict[str, Any], saved: Dict[str, Any]) -> Dict[str, Any]:

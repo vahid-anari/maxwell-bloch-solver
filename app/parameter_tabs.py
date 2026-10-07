@@ -392,9 +392,8 @@ class ParameterTabsWidget(QTabWidget):
         try:
             for p, w in self._widgets_by_path.items():
                 if p in value.keys():
-                    v = value[p]
-                    self._value[p] = v
-                    w.set_value(v)
+                    w.set_value(value[p])
+                    self._value[p] = w.get_value()
         finally:
             self.blockSignals(False)
 
@@ -409,9 +408,8 @@ class ParameterTabsWidget(QTabWidget):
         try:
             for p, w in self._widgets_by_path.items():
                 if p in config.keys():
-                    cfg = config[p]
-                    self._config[p] = cfg
-                    w.set_config(cfg)
+                    w.set_config(config[p])
+                    self._config[p] = w.get_config()
         finally:
             self.blockSignals(False)
 

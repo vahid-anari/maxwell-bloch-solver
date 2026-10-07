@@ -10,7 +10,7 @@ from typing import Any, Optional, Dict
 
 from PySide6.QtWidgets import QFileDialog, QWidget
 
-from app_io.legacy_keys import migrate_legacy_keys
+from app_io.legacy_keys import migrate_legacy_params, migrate_legacy_config
 from dialogs.dialogs import show_critical
 from utils.helper_funcs import restore_special_floats
 
@@ -89,9 +89,9 @@ def open_parameters(parent: QWidget) -> Optional[dict[str, Any]]:
         return None
 
     params = restore_special_floats(params)
-    params["params"] = migrate_legacy_keys(params.get("params", {}))
+    params["params"] = migrate_legacy_params(params.get("params", {}))
     if "config" in params:
-        params["config"] = migrate_legacy_keys(params["config"])
+        params["config"] = migrate_legacy_config(params["config"])
 
     return {
         "path": path,

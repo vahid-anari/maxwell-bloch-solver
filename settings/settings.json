@@ -22,7 +22,7 @@
     "science_style": false,
     "margin": {
       "left": 0.06,
-      "right": 0.97,
+      "right": 0.94,
       "bottom": 0.15,
       "top": 0.94
     }
@@ -98,17 +98,19 @@
         }
       }
     },
-    "bottom_panel": {
+    "bottom_panel_right": {
       "w": {
         "label": "w",
         "unit": "-",
-        "combo_label": "w",
         "props": {
           "color": "magenta",
           "linestyle": "-",
-          "linewidth": 1.25
+          "linewidth": 1.25,
+          "zorder": 3
         }
-      },
+      }
+    },
+    "bottom_panel": {
       "lambda_n": {
         "label": "\\Lambda_n",
         "unit": "\\Lambda_0",

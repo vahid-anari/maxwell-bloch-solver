@@ -49,14 +49,14 @@ class PlotExporter:
     """Build and save export figures derived from the live canvas state."""
 
     def __init__(
-        self,
-        canvas: "PlotCanvas",
-        get_displayed_curves: Callable[[], "DisplayedCurves"],
-        get_params: Callable[[], dict[str, Any]],
-        get_fit_mode: Callable[[], bool],
-        get_view_preference: Callable[[str, bool], bool],
-        get_metadata: Callable[[], dict[str, Any]],
-        get_parameter_tabs_value: Callable[[], dict[str, Any]],
+            self,
+            canvas: "PlotCanvas",
+            get_displayed_curves: Callable[[], "DisplayedCurves"],
+            get_params: Callable[[], dict[str, Any]],
+            get_fit_mode: Callable[[], bool],
+            get_view_preference: Callable[[str, bool], bool],
+            get_metadata: Callable[[], dict[str, Any]],
+            get_parameter_tabs_value: Callable[[], dict[str, Any]],
     ) -> None:
         """Initialize the plot exporter.
 
@@ -324,12 +324,12 @@ class PlotCanvas(FigureCanvas):
     """Embedded Matplotlib canvas used by the main application window."""
 
     def __init__(
-        self,
-        figure_props: Dict[str, Any],
-        axes_props: Dict[str, Any],
-        lines_props: Dict[str, Any],
-        t_limits: Tuple[float, float],
-        parent=None,
+            self,
+            figure_props: Dict[str, Any],
+            axes_props: Dict[str, Any],
+            lines_props: Dict[str, Any],
+            t_limits: Tuple[float, float],
+            parent=None,
     ):
         """Initialize the canvas from the JSON-driven plot configuration.
 
@@ -359,12 +359,16 @@ class PlotCanvas(FigureCanvas):
         self._fig.subplots_adjust(**fig_margin_kws)
 
         top_panel = lines_props["top_panel"]
+        self._flux_grid = {"major": False, "minor": False}
         self._data_points_curve = self._make_curve(self._axes[0], top_panel["data_points"])
         self._flux_curve = self._make_curve(self._axes[0], top_panel["flux"])
 
         bottom_panel = lines_props["bottom_panel"]
         self._bottom_panel_curves: Dict[str, PlotCurve] = {}
         self._bottom_panel_labels: Dict[str, str] = {}
+        self._profile_grid = {"major": False, "minor": False}
+        self._has_profile = True
+        self._profile_color = "black"
         for name, props in bottom_panel.items():
             curve = self._make_curve(self._axes[1], props)
             self._bottom_panel_curves[name] = curve
@@ -372,9 +376,37 @@ class PlotCanvas(FigureCanvas):
 
         for i in range(self._n_axes):
             ax = self._axes[i]
-            self.add_ax_props(ax)
+            zero_line = self.add_ax_props(ax)
+            if i == 0:
+                self._top_zero_line = zero_line
+            elif i == 1:
+                self._profile_zero_line = zero_line
             self._current_center_lines[i] = ax.axvline(0.0, **axes_props["current_span"]["line"], visible=False)
             self._current_spans[i] = ax.axvspan(0.0, 1.0, **axes_props["current_span"]["span"], visible=False)
+            ax.tick_params(axis="y", which="both", right=False)
+
+        self._top_zero_line.set_color(self._flux_curve.line.get_color())
+        self._top_zero_line.set_alpha(0.6)
+
+        # ---- w on a twin (right) axis of the bottom panel ----
+        self._w_grid = {"major": False, "minor": False}
+        self._ax_w = self._axes[1].twinx()
+        self._w_zero_line = self.add_ax_props(self._ax_w)
+        right_panel = lines_props["bottom_panel_right"]
+        self._w_curve = self._make_curve(self._ax_w, right_panel["w"])
+        self._w_zero_line.set_color(self._w_curve.line.get_color())
+        self._w_zero_line.set_alpha(0.6)
+        self._ax_w.set_ylabel(self._make_label(self._w_curve))
+        self._ax_w.set_zorder(self._axes[1].get_zorder() + 1)
+        self._ax_w.patch.set_visible(False)
+        self._w_visible = True
+
+        # Each bottom axis owns one side: profile = left, w = right.
+        self._axes[1].tick_params(axis="y", which="both", right=False)
+        self._ax_w.tick_params(axis="y", which="both", left=False, right=True, labelright=True)
+        self._ax_w.xaxis.set_visible(False)
+        for spine in self._ax_w.spines.values():
+            spine.set_visible(False)
 
         super().__init__(self._fig)
         self.setParent(parent)
@@ -423,6 +455,8 @@ class PlotCanvas(FigureCanvas):
             return self._data_points_curve
         if curve_id == "flux":
             return self._flux_curve
+        if curve_id == "w":
+            return self._w_curve
         return self._bottom_panel_curves.get(curve_id)
 
     def add_ax_props(self, ax):
@@ -430,9 +464,12 @@ class PlotCanvas(FigureCanvas):
 
         Args:
             ax: Target matplotlib axis.
+
+        Returns:
+            The dashed zero line drawn on this axis.
         """
 
-        ax.axhline(0, **self._axes_props["zero_h_line"])
+        zero_line = ax.axhline(0, **self._axes_props["zero_h_line"])
         ax.set_xlabel("", **self._axes_props["label_font"], usetex=self._use_tex)
         ax.set_ylabel("", **self._axes_props["label_font"], labelpad=5, usetex=self._use_tex)
         ax.ticklabel_format(style='plain', axis='x')
@@ -447,6 +484,8 @@ class PlotCanvas(FigureCanvas):
         fmtx = ScalarFormatter(useOffset=False)
         fmtx.set_scientific(False)
         ax.xaxis.set_major_formatter(fmtx)
+
+        return zero_line
 
     def get_bottom_panel_labels(self):
         """Return the current bottom-panel labels.
@@ -491,18 +530,37 @@ class PlotCanvas(FigureCanvas):
             return
         curve.line.set_data(xs, ys)
 
-    def show_bottom_curve(self, name: str) -> None:
-        """Show one bottom-panel curve and hide all others.
+    def set_w_data(self, xs: np.ndarray, ys: np.ndarray) -> None:
+        """Update the population-inversion curve on the right axis."""
+        self._w_curve.line.set_data(xs, ys)
+
+    def show_bottom_curve(self, name: str | None) -> None:
+        """Show one profile on the left axis (or none) and hide the others.
+
+        With ``None``, the left axis label, tick marks and tick labels are hidden.
 
         Args:
-            name: Internal curve name to show.
+            name: Internal curve name to show, or ``None`` for no profile.
         """
-
+        ax = self._axes[1]
         for n, curve in self._bottom_panel_curves.items():
             visible = (n == name)
             curve.line.set_visible(visible)
             if visible:
-                self._axes[1].set_ylabel(self._make_label(curve))
+                ax.set_ylabel(self._make_label(curve))
+                curve_color = curve.line.get_color()
+                self._profile_zero_line.set_color(curve_color)
+                self._profile_zero_line.set_alpha(0.6)
+                self._profile_color = curve_color
+
+        has_profile = name is not None
+        self._has_profile = has_profile
+        self._apply_profile_grid()
+        if not has_profile:
+            ax.set_ylabel("")
+        ax.tick_params(axis="y", which="both", left=has_profile, labelleft=has_profile)
+        ax.yaxis.get_offset_text().set_visible(has_profile)
+        self._profile_zero_line.set_visible(has_profile)
 
     def get_time_limits(self):
         """Return the current time-axis limits.
@@ -547,6 +605,10 @@ class PlotCanvas(FigureCanvas):
             limit: New ``(y_min, y_max)`` tuple.
         """
         self._axes[1].set_ylim(limit)
+
+    def set_w_y_limit(self, limit: Tuple[float, float]) -> None:
+        """Set the right (w) axis limits."""
+        self._ax_w.set_ylim(limit)
 
     def set_time_label(self, label: str, unit: str):
         """Set the time-axis label using LaTeX notation.
@@ -615,25 +677,60 @@ class PlotCanvas(FigureCanvas):
         self._axes[0].grid(visible=visible, which=which, axis='x')
         self._axes[1].grid(visible=visible, which=which, axis='x')
 
-    def set_flux_grid(self, visible: bool, which: str):
-        """Toggle the top-panel y-axis grid.
+    def set_flux_grid(self, visible: bool, which: str) -> None:
+        """Toggle the top-panel y-axis grid, drawn in the flux curve's colour.
 
         Args:
             visible: Whether the grid should be shown.
             which: Grid type, typically ``"major"`` or ``"minor"``.
         """
+        self._flux_grid[which] = visible
+        self._apply_flux_grid()
 
-        self._axes[0].grid(visible=visible, which=which, axis='y')
+    def _apply_flux_grid(self) -> None:
+        """Apply the remembered top-panel y grid in the current flux colour."""
+        ax = self._axes[0]
+        color = self._flux_curve.line.get_color()
+        for which, on in self._flux_grid.items():
+            if on:
+                ax.grid(True, which=which, axis="y", color=color, alpha=0.3)
+            else:
+                ax.grid(False, which=which, axis="y")
 
-    def set_bottom_grid(self, visible: bool, which: str):
-        """Toggle the bottom-panel y-axis grid.
+    def set_w_grid(self, visible: bool, which: str) -> None:
+        """Toggle the y-axis grid of the w (right) axis, drawn in w's colour."""
+        self._w_grid[which] = visible
+        self._apply_w_grid()
+
+    def _apply_w_grid(self) -> None:
+        """Apply the remembered w grid in the current w colour."""
+        color = self._w_curve.line.get_color()
+        for which, on in self._w_grid.items():
+            if on:
+                self._ax_w.grid(True, which=which, axis="y", linestyle=":", color=color, alpha=0.3)
+            else:
+                self._ax_w.grid(False, which=which, axis="y")
+
+    def set_bottom_grid(self, visible: bool, which: str) -> None:
+        """Toggle the profile (left) y-axis grid of the bottom panel.
+
+        The choice is remembered and only shown while a profile is selected.
 
         Args:
             visible: Whether the grid should be shown.
             which: Grid type, typically ``"major"`` or ``"minor"``.
         """
+        self._profile_grid[which] = visible
+        self._apply_profile_grid()
 
-        self._axes[1].grid(visible=visible, which=which, axis='y')
+    def _apply_profile_grid(self) -> None:
+        """Show the remembered profile grid, in the profile's colour, only when a profile is visible."""
+        ax = self._axes[1]
+        for which, on in self._profile_grid.items():
+            if on and self._has_profile:
+                ax.grid(True, which=which, axis="y", color=self._profile_color, alpha=0.3)
+            else:
+                ax.grid(False, which=which, axis="y")
 
     def get_curve_color(self, curve_id: str) -> str | None:
         """Return one curve's current color as a hex string.
@@ -666,6 +763,16 @@ class PlotCanvas(FigureCanvas):
             return False
 
         curve.line.set_color(color)
+        if curve_id == "flux":
+            self._top_zero_line.set_color(color)
+            self._apply_flux_grid()
+        elif curve_id == "w":
+            self._w_zero_line.set_color(color)
+            self._apply_w_grid()
+        elif curve.line.get_visible() and curve_id in self._bottom_panel_curves:
+            self._profile_zero_line.set_color(color)
+            self._profile_color = color
+            self._apply_profile_grid()
         return True
 
     def apply_curve_colors(self, colors: dict[str, str]) -> None:
@@ -703,6 +810,26 @@ class PlotCanvas(FigureCanvas):
             "label": curve.label,
             "unit": curve.unit,
         }
+
+    def set_w_visible(self, visible: bool) -> None:
+        """Show or hide the population inversion w and its right-hand axis.
+
+        When w is hidden, the profile axis takes over the right-side ticks so
+        the bottom panel keeps the same framed look as the top panel.
+
+        Args:
+            visible: Whether w should be shown.
+        """
+        self._w_visible = bool(visible)
+        self._ax_w.set_visible(self._w_visible)
+
+    def is_w_visible(self) -> bool:
+        """Return whether w is currently shown.
+
+        Returns:
+            ``True`` if the w curve and its axis are visible.
+        """
+        return self._w_visible
 
     def redraw(self):
         """Schedule a non-blocking canvas redraw."""

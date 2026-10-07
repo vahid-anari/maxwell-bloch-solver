@@ -22,14 +22,8 @@ import numpy as np
 from PySide6.QtCore import QSize, Qt, QUrl, QTimer
 from PySide6.QtGui import QCloseEvent, QDesktopServices, QAction, QKeySequence
 from PySide6.QtWidgets import (
-    QApplication,
-    QComboBox,
-    QFileDialog,
-    QHBoxLayout,
-    QLabel,
-    QMainWindow,
-    QVBoxLayout,
-    QWidget,
+    QApplication, QComboBox, QFileDialog, QHBoxLayout, QLabel, QMainWindow, QVBoxLayout,
+    QWidget, QCheckBox
 )
 
 show_splash_message("Importing config packages / parameters tabs...")
@@ -119,6 +113,8 @@ MENU_CHECKABLE_IDS = (
     "show_time_minor_grid",
     "show_flux_major_grid",
     "show_flux_minor_grid",
+    "show_w_major_grid",
+    "show_w_minor_grid",
     "show_bottom_major_grid",
     "show_bottom_minor_grid",
     "show_slider_range_labels",
@@ -205,12 +201,6 @@ class MBESolverApp(QMainWindow):
             default_lines_config=default_config["lines"],
         )
 
-        self._line_colors = LineColorManager(
-            canvas=self._canvas,
-            settings=self._settings,
-            default_lines_config=default_config["lines"],
-        )
-
         self._solver = SolverController(
             parent=self,
             on_finished=self._on_solve_finished,
@@ -250,9 +240,7 @@ class MBESolverApp(QMainWindow):
         self._status_bar = StatusBarController(self)
 
         # ---- bottom panel selector ----
-        self._bottom_plot_combo = self._make_curve_selector(
-            self._canvas.get_bottom_panel_labels()
-        )
+        self._bottom_plot_combo = self._make_curve_selector(self._canvas.get_bottom_panel_labels())
         self._bottom_plot = self._bottom_plot_combo.currentData()
 
         # ---- connect signals ----
@@ -264,6 +252,7 @@ class MBESolverApp(QMainWindow):
         self._parameter_tabs.spanChanged.connect(self._on_span_changed)
         self._parameter_tabs.showSpan.connect(self._on_show_span)
         self._bottom_plot_combo.currentIndexChanged.connect(lambda _: self._on_bottom_plot_changed())
+        self._show_w_cb.toggled.connect(self._on_show_w_toggled)
         self._update_checker.updateAvailable.connect(self._on_update_available)
         self._update_checker.upToDate.connect(self._on_up_to_date)
         self._update_checker.checkFailed.connect(self._on_update_check_failed)
@@ -279,9 +268,9 @@ class MBESolverApp(QMainWindow):
         self._settings.line_colors.update_all_menu_icons(self._menu_bar)
         self._update_bottom_plot_combo_icons()
         self._pipeline.tasks.set_all()
-        self._solver.solve()
         self._status_bar.set_path_modified()
         self._on_bottom_plot_changed()
+        QTimer.singleShot(0, self._solver.solve)
         QTimer.singleShot(2000, self._update_checker.check)
 
     # ---- Layout ----
@@ -294,13 +283,13 @@ class MBESolverApp(QMainWindow):
         layout.addWidget(self._parameter_tabs, 0)
 
     def _make_curve_selector(self, items: dict[str, str]) -> QComboBox:
-        """Create the bottom-panel curve selector and add it to the toolbar.
+        """Create the bottom-panel selector and w toggle, and add them to the toolbar.
 
         Args:
             items: Mapping from internal curve IDs to display labels.
 
         Returns:
-            Configured combo box used to select the active bottom-panel curve.
+            Configured combo box used to select the active bottom-panel profile.
         """
         combo = QComboBox()
         combo.setIconSize(QSize(12, 12))
@@ -308,22 +297,37 @@ class MBESolverApp(QMainWindow):
         for name, label in items.items():
             color = saved.get(name) or self._canvas.get_curve_color(name) or "#000000"
             combo.addItem(LineColorManager.make_color_icon(color), label, name)
+        combo.addItem("None", None)
+
+        w_color = saved.get("w") or self._canvas.get_curve_color("w") or "#000000"
+        show_w_cb = QCheckBox("w")
+        show_w_cb.setIcon(LineColorManager.make_color_icon(w_color))
+        show_w_cb.setIconSize(QSize(12, 12))
+        show_w_cb.setChecked(True)
+        self._show_w_cb = show_w_cb
 
         wrapper = QWidget()
         layout = QHBoxLayout(wrapper)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(QLabel("Bottom Plot:"))
         layout.addWidget(combo)
+        layout.addSpacing(8)
+        layout.addWidget(show_w_cb)
         self._velocity_bar.add_widget(wrapper)
         return combo
 
     def _update_bottom_plot_combo_icons(self) -> None:
-        """Refresh bottom-plot combo icons to match the current curve colors."""
+        """Refresh bottom-plot selector and w-toggle icons to match curve colors."""
         combo = self._bottom_plot_combo
         for i in range(combo.count()):
             curve_id = combo.itemData(i)
+            if curve_id is None:
+                continue
             color = self._canvas.get_curve_color(curve_id) or "#000000"
             combo.setItemIcon(i, LineColorManager.make_color_icon(color))
+
+        w_color = self._canvas.get_curve_color("w") or "#000000"
+        self._show_w_cb.setIcon(LineColorManager.make_color_icon(w_color))
 
     # ---- Other helpers ----
     def _apply_saved_defaults(self) -> None:
@@ -488,6 +492,12 @@ class MBESolverApp(QMainWindow):
             checked = self._settings.get_view_preference(action_id, False)
             self._menu_bar.set_checked(action_id, checked)
             self._handle_checkable_menu_action(action_id, checked, persist=False, redraw=False)
+        show_w = self._settings.get_view_preference("show_w", True)
+        self._show_w_cb.blockSignals(True)
+        self._show_w_cb.setChecked(show_w)
+        self._show_w_cb.blockSignals(False)
+        self._on_show_w_toggled(show_w, persist=False)
+
         self._canvas.redraw()
 
     def _rescale_intensity_for_normalize(self, normalize: bool) -> None:
@@ -588,6 +598,10 @@ class MBESolverApp(QMainWindow):
                 {"id": "flux_grid_menu", "submenu": "Flux Grid", "items": [
                     {"id": "show_flux_major_grid", "text": "Major", "checkable": True, "checked": False},
                     {"id": "show_flux_minor_grid", "text": "Minor", "checkable": True, "checked": False},
+                ]},
+                {"id": "w_grid_menu", "submenu": "w Grid", "items": [
+                    {"id": "show_w_major_grid", "text": "Major", "checkable": True, "checked": False},
+                    {"id": "show_w_minor_grid", "text": "Minor", "checkable": True, "checked": False},
                 ]},
                 {"id": "bottom_panel_grid_menu", "submenu": "Bottom Panel Grid", "items": [
                     {"id": "show_bottom_major_grid", "text": "Major", "checkable": True, "checked": False},
@@ -922,6 +936,8 @@ class MBESolverApp(QMainWindow):
             "show_time_minor_grid": lambda: self._canvas.set_time_grid(checked, "minor"),
             "show_flux_major_grid": lambda: self._canvas.set_flux_grid(checked, "major"),
             "show_flux_minor_grid": lambda: self._canvas.set_flux_grid(checked, "minor"),
+            "show_w_major_grid": lambda: self._canvas.set_w_grid(checked, "major"),
+            "show_w_minor_grid": lambda: self._canvas.set_w_grid(checked, "minor"),
             "show_bottom_major_grid": lambda: self._canvas.set_bottom_grid(checked, "major"),
             "show_bottom_minor_grid": lambda: self._canvas.set_bottom_grid(checked, "minor"),
         }
@@ -1164,15 +1180,28 @@ class MBESolverApp(QMainWindow):
         self._save_data_folder()
 
     def _on_bottom_plot_changed(self) -> None:
-        """Handle a change in the selected bottom-panel curve."""
+        """Handle a change in the selected bottom-panel profile (or None)."""
         bottom_plot = self._bottom_plot_combo.currentData()
-        if not bottom_plot:
-            return
         self._bottom_plot = bottom_plot
         for i in range(self._bottom_plot_combo.count()):
             data = self._bottom_plot_combo.itemData(i)
+            if data is None:
+                continue
             self._parameter_tabs.show_widget(f"display.range.{data}", data == bottom_plot)
         self._pipeline.request(plot=True, current_span=True)
+
+    def _on_show_w_toggled(self, checked: bool, persist: bool = True) -> None:
+        """Show or hide w and its range slider in the bottom panel.
+
+        Args:
+            checked: Whether w should be shown.
+            persist: Whether to save the choice as a view preference.
+        """
+        self._canvas.set_w_visible(checked)
+        self._parameter_tabs.show_widget("display.range.w", checked)
+        self._canvas.redraw()
+        if persist:
+            self._settings.set_view_preference("show_w", checked)
 
     def _on_params_value_changed(self, path: str, value: Any) -> None:
         """Route a parameter-widget change to the appropriate update tasks.

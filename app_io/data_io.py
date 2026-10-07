@@ -11,7 +11,7 @@ from typing import Any, Optional
 import numpy as np
 from PySide6.QtWidgets import QApplication, QDialog, QFileDialog, QWidget
 
-from app_io.legacy_keys import migrate_legacy_keys
+from app_io.legacy_keys import migrate_legacy_params, migrate_legacy_config
 from dialogs.dialogs import PeriodInfo, SelectPeriodDialog, show_folder_summary, show_warning
 from utils.helper_funcs import restore_special_floats
 
@@ -396,11 +396,11 @@ def load_params_file(
         data = restore_special_floats(json.load(f))
 
     data["params"] = {
-        velocity: migrate_legacy_keys(p)
+        velocity: migrate_legacy_params(p)
         for velocity, p in data.get("params", {}).items()
     }
     if "config" in data:
-        data["config"] = migrate_legacy_keys(data["config"])
+        data["config"] = migrate_legacy_config(data["config"])
     return data
 
 
