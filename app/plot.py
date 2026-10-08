@@ -19,6 +19,7 @@ import numpy as np
 from PySide6.QtWidgets import QComboBox, QHBoxLayout, QVBoxLayout, QWidget
 
 import matplotlib.pyplot as plt
+from matplotlib.transforms import ScaledTranslation
 from matplotlib import colors as mcolors
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -62,6 +63,9 @@ class PlotExporter:
     _PANEL_HEIGHT = 1.2
     """Height of each lower panel in inches."""
 
+    _PAGE_SIZE = (8.27, 11.69)
+    """A4 page size in inches."""
+
     def __init__(
             self,
             canvas: "PlotCanvas",
@@ -104,7 +108,9 @@ class PlotExporter:
             self._canvas.figure.savefig(path, bbox_inches="tight")
 
     def _save_pdf(self, file_path: str) -> None:
-        """Save a PDF export containing plots and a report page.
+        """Save a PDF export containing the report figure and text pages.
+
+        Every page carries a 'Page X of N' footer.
 
         Args:
             file_path: Output PDF path.
@@ -112,9 +118,17 @@ class PlotExporter:
         report_text = self._build_report_text()
         report_lines = self._wrap_report_lines(report_text, width=110)
 
+        lines_per_page = 70
+        chunks = [
+            report_lines[start: start + lines_per_page]
+            for start in range(0, len(report_lines), lines_per_page)
+        ]
+        total_pages = 1 + len(chunks)
+
         with PdfPages(file_path) as pdf:
             export_fig = self._build_export_figure()
-            pdf.savefig(export_fig, bbox_inches="tight", pad_inches=EXPORT_PLOT_PAD_INCHES)
+            self._add_page_footer(export_fig, 1, total_pages)
+            pdf.savefig(export_fig)
             plt.close(export_fig)
 
             info = pdf.infodict()
@@ -125,13 +139,10 @@ class PlotExporter:
             info["Creator"] = APP_NAME
             info["Keywords"] = "Maxwell-Bloch, plot, parameters, metadata"
 
-            lines_per_page = 70
-            for start in range(0, len(report_lines), lines_per_page):
-                chunk = report_lines[start: start + lines_per_page]
-
+            for page, chunk in enumerate(chunks, start=2):
                 # Disable LaTeX for plain-text report pages.
                 with plt.rc_context({"text.usetex": False}):
-                    fig = plt.figure(figsize=(8.27, 11.69))
+                    fig = plt.figure(figsize=self._PAGE_SIZE)
                     ax = fig.add_axes([0, 0, 1, 1])
                     ax.axis("off")
 
@@ -155,8 +166,9 @@ class PlotExporter:
                         fontsize=8,
                         usetex=False,
                     )
+                    self._add_page_footer(fig, page, total_pages)
 
-                    pdf.savefig(fig, bbox_inches="tight")
+                    pdf.savefig(fig)
                     plt.close(fig)
 
     def _build_report_text(self) -> str:
@@ -172,6 +184,26 @@ class PlotExporter:
             "Parameters", "==========", pretty_json(params),
         ]
         return "\n".join(parts)
+
+    @staticmethod
+    def _add_page_footer(fig: plt.Figure, page: int, total: int, below: bool = False) -> None:
+        """Add a centred 'Page X of N' footer to one figure.
+
+        Args:
+            fig: Figure to annotate.
+            page: Current page number, starting at 1.
+            total: Total number of pages.
+            below: Place the footer just below the figure instead of inside it.
+                Use this for figures whose layout fills the whole canvas.
+        """
+        if below:
+            offset = ScaledTranslation(0, -0.15, fig.dpi_scale_trans)  # 0.15 in below the edge
+            fig.text(0.5, 0.0, f"Page {page} of {total}", ha="center", va="top",
+                     fontsize=8, color="0.4", usetex=False,
+                     transform=fig.transFigure + offset)
+        else:
+            fig.text(0.5, 0.01, f"Page {page} of {total}", ha="center", va="bottom",
+                     fontsize=8, color="0.4", usetex=False)
 
     @staticmethod
     def _wrap_report_lines(text: str, width: int = 110) -> list[str]:
@@ -225,15 +257,24 @@ class PlotExporter:
         panel_ids = ["w"] + shown
         heights = [self._TOP_HEIGHT] + [self._PANEL_HEIGHT] * len(panel_ids)
 
-        fig, axes = plt.subplots(
+        page_w, page_h = self._PAGE_SIZE
+        margin_left, margin_right, margin_top = 1.0, 0.5, 1.0  # inches
+        gap = 0.12  # space between panels, inches
+        content_h = sum(heights) + gap * (len(heights) - 1)
+
+        fig = plt.figure(figsize=(page_w, page_h))
+        gs = fig.add_gridspec(
             nrows=len(heights),
             ncols=1,
-            sharex=True,
-            figsize=(8.27 - 2 * EXPORT_PLOT_PAD_INCHES, sum(heights)),
-            gridspec_kw={"height_ratios": heights},
-            constrained_layout=True,
+            height_ratios=heights,
+            left=margin_left / page_w,
+            right=1 - margin_right / page_w,
+            top=1 - margin_top / page_h,
+            bottom=1 - (margin_top + content_h) / page_h,
+            hspace=gap / np.mean(heights),
         )
-        axes = list(np.atleast_1d(axes))
+        axes = [fig.add_subplot(gs[0])]
+        axes += [fig.add_subplot(gs[i], sharex=axes[0]) for i in range(1, len(heights))]
 
         # ---- top panel: data and flux ----
         top_ax = axes[0]
@@ -271,7 +312,8 @@ class PlotExporter:
 
         title = self._figure_title(fit_mode)
         omitted_text = self._omitted_text(res, omitted)
-        fig.suptitle(f"{title}\n{omitted_text}" if omitted_text else title, fontsize=11)
+        title_text = f"{title}\n{omitted_text}" if omitted_text else title
+        fig.text(0.5, 1 - 0.4 / page_h, title_text, ha="center", va="top", fontsize=11)
         return fig
 
     def _select_profiles(self, res: "SolverResultsDisplay") -> tuple[list[str], list[str]]:
