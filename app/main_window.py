@@ -227,7 +227,7 @@ class MBESolverApp(QMainWindow):
             get_params=self._parameter_tabs.get_value,
             get_fit_mode=lambda: self._fit_mode,
             get_view_preference=self._settings.get_view_preference,
-            get_metadata=self._get_metadata_text,
+            get_metadata=lambda: self._get_metadata_text(add_velocity=True),
             get_parameter_tabs_value=self._parameter_tabs.get_value,
         )
 
@@ -240,7 +240,7 @@ class MBESolverApp(QMainWindow):
         self._status_bar = StatusBarController(self)
 
         # ---- bottom panel selector ----
-        self._bottom_plot_combo = self._make_curve_selector(self._canvas.get_bottom_panel_labels())
+        self._bottom_plot_combo = self._make_curve_selector(self._canvas.get_profile_combo_labels())
         self._bottom_plot = self._bottom_plot_combo.currentData()
 
         # ---- connect signals ----
@@ -938,8 +938,8 @@ class MBESolverApp(QMainWindow):
             "show_flux_minor_grid": lambda: self._canvas.set_flux_grid(checked, "minor"),
             "show_w_major_grid": lambda: self._canvas.set_w_grid(checked, "major"),
             "show_w_minor_grid": lambda: self._canvas.set_w_grid(checked, "minor"),
-            "show_bottom_major_grid": lambda: self._canvas.set_bottom_grid(checked, "major"),
-            "show_bottom_minor_grid": lambda: self._canvas.set_bottom_grid(checked, "minor"),
+            "show_bottom_major_grid": lambda: self._canvas.set_profile_grid(checked, "major"),
+            "show_bottom_minor_grid": lambda: self._canvas.set_profile_grid(checked, "minor"),
         }
         handler = grid_actions.get(action_id)
         if handler is None:

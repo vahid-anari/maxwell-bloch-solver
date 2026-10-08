@@ -338,12 +338,12 @@ class UpdatePipeline:
 
         canvas.set_flux(time, intensity)
         canvas.set_w_data(time, w)
-        canvas.set_bottom_curve_data("lambda_n", time, lambda_n)
-        canvas.set_bottom_curve_data("A0", time, A0)
-        canvas.set_bottom_curve_data("t1", time, t1)
-        canvas.set_bottom_curve_data("t2", time, t2)
+        canvas.set_profile_data("lambda_n", time, lambda_n)
+        canvas.set_profile_data("A0", time, A0)
+        canvas.set_profile_data("t1", time, t1)
+        canvas.set_profile_data("t2", time, t2)
 
-        canvas.show_bottom_curve(bottom_plot)
+        canvas.show_profile(bottom_plot)
 
     def _update_range(self, params: dict[str, Any]) -> None:
         """Update all axis limits from the current display-range settings.
@@ -377,7 +377,7 @@ class UpdatePipeline:
             )
         )
         if bottom_plot:
-            canvas.set_bottom_panel_y_limit(
+            canvas.set_profile_y_limit(
                 get_range(
                     limits=params[f"display.range.{bottom_plot}"],
                     arr1=cut_y_by_x(

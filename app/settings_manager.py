@@ -298,7 +298,8 @@ class LineColorManager:
             {"id": f"{LINE_COLOR_ACTION_PREFIX}w", "text": "w..."},
             {"id": "sep"},
         ]
-        for name, props in self._default_lines_config.get("bottom_panel", {}).items():
+        profiles = self._default_lines_config.get("bottom_panel", {}).get("left", {})
+        for name, props in profiles.items():
             text = props.get("combo_label") or props.get("label") or name
             items.append({"id": f"{LINE_COLOR_ACTION_PREFIX}{name}", "text": f"{text}..."})
 
@@ -327,18 +328,13 @@ class LineColorManager:
         Returns:
             Mapping from curve identifiers to default colors.
         """
-        lines = self._default_lines_config
         out: Dict[str, str] = {}
-        top_panel = lines.get("top_panel", {})
-        for name in ("data_points", "flux"):
-            color = top_panel.get(name, {}).get("props", {}).get("color")
-            if color:
-                out[name] = str(color)
-        for section in ("bottom_panel_right", "bottom_panel"):
-            for name, item in lines.get(section, {}).items():
-                color = item.get("props", {}).get("color")
-                if color:
-                    out[name] = str(color)
+        for panel in self._default_lines_config.values():
+            for side in panel.values():
+                for name, item in side.items():
+                    color = item.get("props", {}).get("color")
+                    if color:
+                        out[name] = str(color)
         return out
 
     def _settings_key(self, curve_id: str) -> str:

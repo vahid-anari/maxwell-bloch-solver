@@ -78,77 +78,81 @@
   },
   "lines": {
     "top_panel": {
-      "data_points": {
-        "label": "",
-        "unit": "",
-        "props": {
-          "linestyle": "",
-          "marker": "o",
-          "markersize": 3,
-          "color": "k"
-        }
-      },
-      "flux": {
-        "label": "F",
-        "unit": "\\mathrm{Jy}",
-        "props": {
-          "color": "b",
-          "linestyle": "-",
-          "linewidth": 1.25
-        }
-      }
-    },
-    "bottom_panel_right": {
-      "w": {
-        "label": "w",
-        "unit": "-",
-        "props": {
-          "color": "magenta",
-          "linestyle": "-",
-          "linewidth": 1.25,
-          "zorder": 3
+      "left": {
+        "data_points": {
+          "label": "",
+          "unit": "",
+          "props": {
+            "linestyle": "",
+            "marker": "o",
+            "markersize": 3,
+            "color": "k"
+          }
+        },
+        "flux": {
+          "label": "F",
+          "unit": "\\mathrm{Jy}",
+          "props": {
+            "color": "b",
+            "linestyle": "-",
+            "linewidth": 1.25
+          }
         }
       }
     },
     "bottom_panel": {
-      "lambda_n": {
-        "label": "\\Lambda_n",
-        "unit": "\\Lambda_0",
-        "combo_label": "Λₙ",
-        "props": {
-          "color": "cyan",
-          "linestyle": "-",
-          "linewidth": 1.25
+      "left": {
+        "lambda_n": {
+          "label": "\\Lambda_n",
+          "unit": "\\Lambda_0",
+          "combo_label": "Λₙ",
+          "props": {
+            "color": "cyan",
+            "linestyle": "-",
+            "linewidth": 1.25
+          }
+        },
+        "A0": {
+          "label": "A\\vert_{z=0}",
+          "unit": "A_0",
+          "combo_label": "A|z=0",
+          "props": {
+            "color": "orange",
+            "linestyle": "-",
+            "linewidth": 1.25
+          }
+        },
+        "t1": {
+          "label": "T_1",
+          "unit": "T_0",
+          "combo_label": "T₁",
+          "props": {
+            "color": "forestgreen",
+            "linestyle": "-",
+            "linewidth": 1.25
+          }
+        },
+        "t2": {
+          "label": "T_2",
+          "unit": "T_0",
+          "combo_label": "T₂",
+          "props": {
+            "color": "yellowgreen",
+            "linestyle": "-",
+            "linewidth": 1.25
+          }
         }
       },
-      "A0": {
-        "label": "A\\vert_{z=0}",
-        "unit": "A_0",
-        "combo_label": "A|z=0",
-        "props": {
-          "color": "orange",
-          "linestyle": "-",
-          "linewidth": 1.25
-        }
-      },
-      "t1": {
-        "label": "T_1",
-        "unit": "T_0",
-        "combo_label": "T₁",
-        "props": {
-          "color": "forestgreen",
-          "linestyle": "-",
-          "linewidth": 1.25
-        }
-      },
-      "t2": {
-        "label": "T_2",
-        "unit": "T_0",
-        "combo_label": "T₂",
-        "props": {
-          "color": "yellowgreen",
-          "linestyle": "-",
-          "linewidth": 1.25
+      "right": {
+        "w": {
+          "label": "w",
+          "unit": "-",
+          "props": {
+            "color": "magenta",
+            "linestyle": "-",
+            "linewidth": 1.25,
+            "zorder": 3
+          }
         }
       }
     }
