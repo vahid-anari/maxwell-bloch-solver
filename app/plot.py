@@ -987,7 +987,7 @@ def _demo_main() -> int:
     )
     from paths import SETTINGS_FILE_PATH
     from settings.app_style import set_app_style
-    from ui.params.range_sliders import FloatRangeSlider
+    from sciwidgets.params import FloatRangeSlider
     from utils.helper_funcs import cut_y_by_x, get_range, read_json
 
     sys.path.append("/Users/vahidanari/Desktop/Python Examples")

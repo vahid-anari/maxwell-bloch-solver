@@ -7,11 +7,9 @@ from typing import Any, Dict
 from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
 
 from settings.ui_defaults import SLIDER_SHOW_RANGE
-from ui.labels import SvgLabel
-from ui.params.parameter_line_edit import ParameterLineEdit
-from ui.params.parameter_widget_base import ParameterWidgetBase
+from sciwidgets.labels import MathLabel
+from sciwidgets.params import FloatSlider, ParameterLineEdit, ParameterWidgetBase
 from ui.params.scaling_parameters import ScalingParameters
-from ui.params.sliders import FloatSlider
 from utils.helper_funcs import make_layout, parse_orientation, pretty_json
 
 
@@ -242,7 +240,7 @@ def _demo_main() -> int:
 
     w = QWidget()
     layout = QVBoxLayout(w)
-    layout.addWidget(SvgLabel(r"\alpha_\beta"), 1)
+    layout.addWidget(MathLabel(r"\alpha_\beta"), 1)
     layout.addWidget(sp, 0)
     win.setCentralWidget(w)
     win.resize(800, 600)

@@ -6,7 +6,6 @@ import math
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
-from numba import njit
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPalette
 from PySide6.QtWidgets import (
@@ -26,10 +25,8 @@ from PySide6.QtWidgets import (
 
 from settings.app_style import USE_LATEX
 from settings.ui_defaults import SLIDER_SHOW_RANGE
-from ui.labels import SvgLabel
-from ui.params.multi_variable_slider import MultiVariableSlider
-from ui.params.parameter_widget_base import ParameterWidgetBase
-from ui.params.sliders import FloatSlider
+from sciwidgets.labels import MathLabel
+from sciwidgets.params import FloatSlider, MultiVariableSlider, ParameterWidgetBase
 from utils.helper_funcs import make_box
 
 
@@ -77,18 +74,18 @@ class PulseFunctionWidget(ParameterWidgetBase):
         self._same_wr_cb = self._make_checkbox(params_props.get("same_wr", {}))
         self._use_xp_cb = self._make_checkbox(params_props.get("use_xp", {}))
 
-        self._use_xp_label = SvgLabel(self._make_use_xp_text())
+        self._use_xp_label = MathLabel(self._make_use_xp_text())
 
         a = self._a_slider._label_text
         x0 = self._x0_slider._label_text
         f = params_props.get("f", "f")
         x = params_props.get("x", "x")
         if USE_LATEX:
-            self._f1 = SvgLabel(
+            self._f1 = MathLabel(
                 fr"{f}({x})=\displaystyle\sum_{{i=0}}^{{N-1}}"
                 fr"{a}^i\;\mathrm{{sech}}^2\!\left(\frac{{{x}-{x0}^i}}{{w^i}}\right)"
             )
-            self._f2 = SvgLabel(
+            self._f2 = MathLabel(
                 fr"w^i=\left\lbrace "
                 fr"\begin{{array}}{{ll}}"
                 fr"w_l^i \quad & {x}<{x0}^i"
@@ -98,11 +95,11 @@ class PulseFunctionWidget(ParameterWidgetBase):
                 fr"\right."
             )
         else:
-            self._f1 = SvgLabel(
+            self._f1 = MathLabel(
                 fr"{f}({x})=\sum_{{i=0}}^{{N-1}}"
                 fr"{a}^i\;\mathrm{{sech}}^2\!\left(\frac{{{x}-{x0}^i}}{{w^i}}\right)"
             )
-            self._f2 = SvgLabel(
+            self._f2 = MathLabel(
                 fr"w^i = w_l^i \;\; ({x} < {x0}^i), \quad w_r^i \;\; ({x} > {x0}^i)"
             )
         self._empty = QWidget()
@@ -139,9 +136,9 @@ class PulseFunctionWidget(ParameterWidgetBase):
         gl = QGridLayout()
         gl.setContentsMargins(0, 0, 0, 0)
         gl.setHorizontalSpacing(0)
-        gl.addWidget(SvgLabel("N=", alignment=Qt.AlignRight | Qt.AlignVCenter), 0, 0)
+        gl.addWidget(MathLabel("N=", alignment=Qt.AlignRight | Qt.AlignVCenter), 0, 0)
         gl.addWidget(self._arr_length_sb, 0, 1)
-        gl.addWidget(SvgLabel("i=", alignment=Qt.AlignRight | Qt.AlignVCenter), 1, 0)
+        gl.addWidget(MathLabel("i=", alignment=Qt.AlignRight | Qt.AlignVCenter), 1, 0)
         gl.addWidget(self._current_idx_combo, 1, 1)
         gl.setColumnStretch(2, 1)
 

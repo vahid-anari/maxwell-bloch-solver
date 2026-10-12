@@ -107,7 +107,7 @@ from utils.helper_funcs import pretty_json, read_json, set_win_center
 from utils.solver_step_viewer import StepScatterWidget
 from utils.units import VELOCITY_UNIT_TEXT
 from app_io.legacy_keys import merge_onto_defaults
-from ui.params.slider_base import SliderWidgetBase
+from sciwidgets.params import SliderWidgetBase
 
 MENU_CHECKABLE_IDS = (
     "show_time_major_grid",

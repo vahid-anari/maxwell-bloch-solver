@@ -30,13 +30,17 @@ from settings.ui_defaults import SLIDER_SHOW_RANGE
 from ui.params.pulse_function import PulseFunctionWidget
 from ui.params.step_function import StepFunctionWidget
 from ui.params.initial_conditions import InitialConditionsWidget
-from ui.params.parameter_combo_box import ParameterComboBox
-from ui.params.parameter_toggle import ParameterToggle
-from ui.params.parameter_line_edit import ParameterLineEdit
-from ui.params.parameter_widget_base import ParameterWidgetBase
-from ui.params.range_sliders import FloatRangeSlider
+from sciwidgets.params import (
+    ArraySlider,
+    FloatRangeSlider,
+    FloatSlider,
+    IntSlider,
+    ParameterComboBox,
+    ParameterLineEdit,
+    ParameterToggle,
+    ParameterWidgetBase,
+)
 from ui.params.sample_properties import SamplePropertiesWidget
-from ui.params.sliders import ArraySlider, FloatSlider, IntSlider
 from utils.helper_funcs import make_layout, parse_orientation, pretty_json, set_win_center
 
 

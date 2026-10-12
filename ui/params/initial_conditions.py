@@ -6,9 +6,8 @@ from typing import Any, Dict, Optional
 
 from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget, QHBoxLayout
 
-from ui.labels import SvgLabel
-from ui.params.parameter_widget_base import ParameterWidgetBase
-from ui.params.sliders import FloatSlider
+from sciwidgets.labels import MathLabel
+from sciwidgets.params import FloatSlider, ParameterWidgetBase
 from utils.helper_funcs import make_box
 
 
@@ -78,8 +77,8 @@ class InitialConditionsWidget(ParameterWidgetBase[dict]):
         """Create and assign the layout used by this widget."""
 
         theta0_l = QVBoxLayout()
-        theta0_l.addWidget(SvgLabel(r"w\vert_{\tau=0}=\cos (\theta_0)", fix_size=True))
-        theta0_l.addWidget(SvgLabel(r"R\vert_{\tau=0}=\sin (\theta_0)", fix_size=True))
+        theta0_l.addWidget(MathLabel(r"w\vert_{\tau=0}=\cos (\theta_0)", fix_size=True))
+        theta0_l.addWidget(MathLabel(r"R\vert_{\tau=0}=\sin (\theta_0)", fix_size=True))
         theta0_g = make_box("Use θ₀", theta0_l, checkable=True, checked=self._use_theta0)
         theta0_g.toggled.connect(self._update_check_state)
         self._theta0_g = theta0_g

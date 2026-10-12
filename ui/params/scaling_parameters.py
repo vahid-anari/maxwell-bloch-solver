@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
 
 from settings.app_style import SCALING_PARAMS_MAP_GROUP_ID_TO_LABEL, USE_LATEX
 from settings.ui_defaults import SCALING_PARAM_DIGIT, SCALING_PARAM_SIZE
-from ui.labels import SvgLabel
+from sciwidgets.labels import MathLabel
 from utils.constants_si import C, EPSILON_0, H_BAR, MU_0, PI
 from utils.helper_funcs import make_box, pretty_sci_text
 
@@ -66,7 +66,7 @@ class ScalingParameter:
                 widgets.
         """
 
-        label = SvgLabel(
+        label = MathLabel(
             text=self._label,
             alignment=Qt.AlignRight | Qt.AlignVCenter,
             fix_size=True,
@@ -80,7 +80,7 @@ class ScalingParameter:
         if self._has_value:
             rhs_text += f"={pretty_sci_text(self._value, sig_digits=self._sig_digits, notation='latex')}"
 
-        rhs = SvgLabel(
+        rhs = MathLabel(
             text=rhs_text,
             alignment=Qt.AlignLeft | Qt.AlignVCenter,
             fix_size=True,
@@ -89,7 +89,7 @@ class ScalingParameter:
         gl.addWidget(rhs, row, 1)
 
         if self._unit:
-            unit = SvgLabel(
+            unit = MathLabel(
                 text=f"({self._unit})",
                 alignment=Qt.AlignRight | Qt.AlignVCenter,
                 fix_size=True,

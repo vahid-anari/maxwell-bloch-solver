@@ -26,10 +26,8 @@ from PySide6.QtWidgets import (
 
 from settings.app_style import USE_LATEX
 from settings.ui_defaults import SLIDER_SHOW_RANGE
-from ui.labels import SvgLabel
-from ui.params.multi_variable_slider import MultiVariableSlider
-from ui.params.parameter_widget_base import ParameterWidgetBase
-from ui.params.sliders import FloatSlider, SpecialValue
+from sciwidgets.labels import MathLabel
+from sciwidgets.params import FloatSlider, MultiVariableSlider, ParameterWidgetBase, SpecialValue
 from utils.helper_funcs import make_box
 from dialogs.dialogs import AskResult, ask_question
 
@@ -84,19 +82,19 @@ class StepFunctionWidget(ParameterWidgetBase):
         self._same_wr_cb = self._make_checkbox(params_props.get("same_wr", {}))
         self._use_xp_cb = self._make_checkbox(params_props.get("use_xp", {}))
 
-        self._use_xp_label = SvgLabel(self._make_use_xp_text())
+        self._use_xp_label = MathLabel(self._make_use_xp_text())
 
         y = self._y_slider._label_text
         x0 = self._x0_slider._label_text
         f = params_props.get("f", "f")
         x = params_props.get("x", "x")
-        self._f0 = SvgLabel(fr"{f}({x}) = {y}")
+        self._f0 = MathLabel(fr"{f}({x}) = {y}")
         if USE_LATEX:
-            self._f1 = SvgLabel(
+            self._f1 = MathLabel(
                 fr"{f}({x}) = {y}^0 + \displaystyle\sum_{{i=1}}^{{N-1}}"
                 fr"\frac{{{y}^i - {y}^{{i-1}}}}{{2}}\left(1 + \tanh\!\left(\frac{{{x}-{x0}^i}}{{w^i}}\right)\right)"
             )
-            self._f_width = SvgLabel(
+            self._f_width = MathLabel(
                 fr"w^i=\left\lbrace "
                 fr"\begin{{array}}{{ll}}"
                 fr"w_l^i \quad & {x}<{x0}^i"
@@ -106,11 +104,11 @@ class StepFunctionWidget(ParameterWidgetBase):
                 fr"\right."
             )
         else:
-            self._f1 = SvgLabel(
+            self._f1 = MathLabel(
                 fr"{f}({x}) = {y}^0 + \sum_{{i=1}}^{{N-1}}"
                 fr"\frac{{{y}^i - {y}^{{i-1}}}}{{2}}\left(1 + \tanh\!\left(\frac{{{x}-{x0}^i}}{{w^i}}\right)\right)"
             )
-            self._f_width = SvgLabel(
+            self._f_width = MathLabel(
                 fr"w^i = w_l^i \;\; ({x} < {x0}^i), \quad w_r^i \;\; ({x} > {x0}^i)"
             )
         self._empty = QWidget()
@@ -148,9 +146,9 @@ class StepFunctionWidget(ParameterWidgetBase):
         gl = QGridLayout()
         gl.setContentsMargins(0, 0, 0, 0)
         gl.setHorizontalSpacing(0)
-        gl.addWidget(SvgLabel("N=", alignment=Qt.AlignRight | Qt.AlignVCenter), 0, 0)
+        gl.addWidget(MathLabel("N=", alignment=Qt.AlignRight | Qt.AlignVCenter), 0, 0)
         gl.addWidget(self._arr_length_sb, 0, 1)
-        self._i_label = SvgLabel("i=", alignment=Qt.AlignRight | Qt.AlignVCenter)
+        self._i_label = MathLabel("i=", alignment=Qt.AlignRight | Qt.AlignVCenter)
         gl.addWidget(self._i_label, 1, 0)
         gl.addWidget(self._current_idx_combo, 1, 1)
         gl.setColumnStretch(2, 1)

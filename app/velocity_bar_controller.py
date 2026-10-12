@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
 
 from dialogs.dialogs import AskResult, ask_question, show_information
 from settings.app_style import VELOCITY_COMBO_WIDTH
-from ui.labels import SvgLabel
+from sciwidgets.labels import MathLabel
 from utils.helper_funcs import set_widget_width, value_to_text
 from utils.units import VELOCITY_UNIT_LATEX
 
@@ -58,10 +58,10 @@ class VelocityBarController(QWidget):
         self._last_index: int = -1
         self._ignore_index_change = False
 
-        self._velocity_label = SvgLabel("v=")
+        self._velocity_label = MathLabel("v=")
         self._combo = QComboBox()
         self._combo.setFixedWidth(VELOCITY_COMBO_WIDTH)
-        self._velocity_unit_label = SvgLabel(VELOCITY_UNIT_LATEX)
+        self._velocity_unit_label = MathLabel(VELOCITY_UNIT_LATEX)
 
         pm = QPixmap(self._combo.iconSize())
         pm.fill(Qt.transparent)
@@ -76,7 +76,7 @@ class VelocityBarController(QWidget):
         self._save_btn = self._make_btn("Save", 60, h)
         self._unsave_btn = self._make_btn("Unsave", 60, h)
 
-        self._chi_square_label = SvgLabel(r"\chi^2=")
+        self._chi_square_label = MathLabel(r"\chi^2=")
         l = QLabel("")
         l.setObjectName("chi_value")
         set_widget_width(l, 8)
@@ -481,7 +481,7 @@ def _demo_main() -> int:
 
     from settings.app_style import set_app_style
     from ui.menu_bar_controller import MENU_SPEC_EXAMPLE, MenuBarController
-    from ui.params.sliders import FloatSlider
+    from sciwidgets.params import FloatSlider
 
     class MainWindow(QMainWindow):
         """Demo main window for the velocity-bar controller."""
@@ -491,7 +491,7 @@ def _demo_main() -> int:
 
             super().__init__()
 
-            self._label = SvgLabel(r"\alpha_\beta")
+            self._label = MathLabel(r"\alpha_\beta")
             self._mark_dirty_btn = QPushButton("Modified")
             self._vc = VelocityBarController(window=self)
             self._menu_ctrl = MenuBarController(self, menu_spec=MENU_SPEC_EXAMPLE, native_menubar=False)
