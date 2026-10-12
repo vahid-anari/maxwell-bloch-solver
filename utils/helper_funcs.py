@@ -21,9 +21,9 @@ from PySide6.QtWidgets import (
 
 
 def pretty_sci_text(
-    value: float,
-    sig_digits: int = 3,
-    notation: Literal["plain", "html", "latex"] = "html",
+        value: float,
+        sig_digits: int = 3,
+        notation: Literal["plain", "html", "latex"] = "html",
 ) -> str:
     """Format a float using scientific notation when appropriate.
 
@@ -54,7 +54,7 @@ def pretty_sci_text(
 
     av = abs(value)
 
-    if 1 <= av < 10**sig_digits:
+    if 1 <= av < 10 ** sig_digits:
         s = f"{value:.{sig_digits}g}"
         if "e" not in s and "E" not in s:
             if "." in s:
@@ -308,6 +308,28 @@ def parse_orientation(value: str) -> Qt.Orientation:
     if value in ("v", "vertical"):
         return Qt.Vertical
     raise ValueError(f"Invalid orientation: {value!r}")
+
+
+_SCI_PAT = r"\{:[0-9]*\.(\d+)S\}"
+
+
+def format_is_valid(fmt: str, sample: int | float) -> bool:
+    """Return whether ``fmt`` can format ``sample`` without falling back.
+
+    Args:
+        fmt: Format string, possibly using the custom ``"S"`` marker.
+        sample: Value of the type the format will be used with.
+
+    Returns:
+        ``True`` if the format is usable for ``sample``.
+    """
+    try:
+        get_numeric_format_field(fmt).format(sample)
+        if not re.search(_SCI_PAT, fmt):
+            fmt.format(sample)
+    except (ValueError, TypeError, IndexError, KeyError):
+        return False
+    return True
 
 
 def get_numeric_format_field(fmt: str) -> str:

@@ -32,13 +32,13 @@ class ParameterComboBox(ParameterWidgetBase[str]):
         super().__init__(parent)
 
         self._label = SvgLabel(f"{label}=", alignment=Qt.AlignRight | Qt.AlignVCenter)
-        self._name_width = self._label.sizeHint().width()
-        self._items = items
+        self._measured_name_width = self._label.sizeHint().width()
         combo = QComboBox(self)
         for v in items:
             combo.addItem(v)
-        combo.currentIndexChanged.connect(self._on_values_changed)
+        combo.activated.connect(self._on_activated)
         self._combo = combo
+        self._last_value = combo.currentText()
 
         self._make_layout()
 
@@ -53,16 +53,19 @@ class ParameterComboBox(ParameterWidgetBase[str]):
         gl.setColumnStretch(1, 0)
         gl.setColumnStretch(2, 1)
         self._gl = gl
+        self._update_layout()
 
     def _update_layout(self) -> None:
-        """Refresh layout sizing to reflect the current name width."""
+        """Reserve the effective name width for the label column."""
 
-        self._gl.setColumnMinimumWidth(0, self._name_width)
+        self._gl.setColumnMinimumWidth(0, self._effective_name_width())
 
-    def _on_values_changed(self) -> None:
-        """Emit the current value after the combo-box selection changes."""
-
-        self.valueChanged.emit(self.get_value())
+    def _on_activated(self, _index: int) -> None:
+        """Emit the value after the user picks a different item."""
+        value = self.get_value()
+        if value != self._last_value:
+            self._last_value = value
+            self.valueChanged.emit(value)
 
     def get_value(self) -> str:
         """Return the currently selected combo-box text.
@@ -84,13 +87,13 @@ class ParameterComboBox(ParameterWidgetBase[str]):
 
         Raises:
             TypeError: If ``value`` is not a string.
-            ValueError: If ``value`` is empty.
+            ValueError: If no combo-box item matches ``value``.
         """
 
         if not isinstance(value, str):
             raise TypeError("'value' must be a string")
-        if not value:
-            raise ValueError("item['text'] must be provided")
+        if self._combo.findText(value) < 0:
+            raise ValueError(f"No combo item found for text={value!r}")
         return value
 
     def _apply_value(self, value: str) -> None:
@@ -98,15 +101,9 @@ class ParameterComboBox(ParameterWidgetBase[str]):
 
         Args:
             value: Combo-box text to select.
-
-        Raises:
-            ValueError: If no combo-box item matches ``value``.
         """
-
-        idx = self._combo.findText(value)
-        if idx < 0:
-            raise ValueError(f"No combo item found for text={value!r}")
-        self._combo.setCurrentIndex(idx)
+        self._combo.setCurrentIndex(self._combo.findText(value))
+        self._last_value = value
 
 
 

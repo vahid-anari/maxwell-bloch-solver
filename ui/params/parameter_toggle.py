@@ -46,7 +46,8 @@ class ParameterToggle(ParameterWidgetBase[bool]):
                 )
             self._stack.setCurrentIndex(int(checked))
 
-        self._check.toggled.connect(self._on_toggled)
+        self._check.toggled.connect(self._sync_label)
+        self._check.clicked.connect(self._on_clicked)
 
         self._make_layout()
 
@@ -65,17 +66,15 @@ class ParameterToggle(ParameterWidgetBase[bool]):
 
     def _update_layout(self) -> None:
         """Indent the checkbox by half the shared name width of sibling widgets."""
-        self._gl.setColumnMinimumWidth(0, self._name_width // 2)
+        self._gl.setColumnMinimumWidth(0, self._effective_name_width() // 2)
 
-    def _on_toggled(self, state: bool) -> None:
-        """Switch the label and emit the new value.
-
-        Args:
-            state: New checked state.
-        """
-
+    def _sync_label(self, state: bool) -> None:
+        """Show the label for the current state (any change)."""
         if self._stack is not None:
             self._stack.setCurrentIndex(int(state))
+
+    def _on_clicked(self, state: bool) -> None:
+        """Emit the new value after a user click."""
         self.valueChanged.emit(state)
 
     def get_value(self) -> bool:

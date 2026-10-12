@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import numbers
 from typing import Optional, Callable
 
 from PySide6.QtCore import Qt, Signal, QEvent, QTimer, QRegularExpression
@@ -153,7 +154,6 @@ class NumericLineEdit(QLineEdit):
         _in_refocus: Whether a refocus cycle is currently in progress.
         _skip_next_focus_out_check: Whether the next focus-out validation should
             be skipped.
-        _reject_pending: Internal flag reserved for rejection bookkeeping.
         _last_value: Last successfully committed numeric value.
     """
 
@@ -206,7 +206,6 @@ class NumericLineEdit(QLineEdit):
         self._invalid_property = False
         self._in_refocus = False
         self._skip_next_focus_out_check = False
-        self._reject_pending = False
         self._last_value: Num = init_val
 
         self.setValidator(self._make_validator())
@@ -320,17 +319,20 @@ class NumericLineEdit(QLineEdit):
         """Validate and normalize a programmatically supplied value.
 
         Args:
-            value: Value to validate.
+            value: Value to validate. Python and numpy numbers are accepted.
 
         Returns:
-            Num: Normalized validated value.
+            Num: Value rounded to the display format.
 
         Raises:
-            ValueError: If the value type is invalid or the normalized value is
-                outside the configured bounds.
+            TypeError: If the value is not a real number, or not an integer on
+                an integer line edit. ``bool`` is rejected.
+            ValueError: If the rounded value is outside the configured bounds.
         """
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
-            raise ValueError(f"Invalid value: {value!r}")
+        if isinstance(value, bool) or not isinstance(value, numbers.Real):
+            raise TypeError(f"value must be a number, not {type(value).__name__}")
+        if self._value_is_int and not isinstance(value, numbers.Integral):
+            raise TypeError(f"value must be an int, not {type(value).__name__}")
 
         validated_value = self._value_to_formated_value(value)
         if not self._in_range(validated_value):
@@ -342,6 +344,10 @@ class NumericLineEdit(QLineEdit):
 
         Args:
             value: Previously validated numeric value to store and display.
+
+        Raises:
+            ValueError: If the value is outside the limits (checked by the
+                line edit before anything changes).
         """
         self._last_value = value
         text = self._value_to_text(value)
@@ -417,7 +423,7 @@ class NumericLineEdit(QLineEdit):
         return "Please enter a valid value."
 
     # ----- validation helpers -----
-    def _validation_state(self, text: str) -> QValidator.StatusState:
+    def _validation_state(self, text: str) -> QValidator.State:
         """Return the validator state for the provided text.
 
         Args:
@@ -480,10 +486,10 @@ class NumericLineEdit(QLineEdit):
             return
 
         new_value = self._text_to_formated_value(self.text())
+        self._set_invalid_property(False)
+        self._set_text_safely(self._value_to_text(new_value))
         if new_value != self._last_value:
             self._last_value = new_value
-            self._set_invalid_property(False)
-            self._set_text_safely(self._value_to_text(new_value))
             self.valueChanged.emit(new_value)
 
     # ----- refocus / rejection -----
@@ -520,8 +526,9 @@ class NumericLineEdit(QLineEdit):
             value: New value to store and display.
 
         Raises:
-            ValueError: If the provided value is invalid or outside the
-                configured bounds.
+            TypeError: If the value is not a number (or not an int on an
+                integer line edit).
+            ValueError: If the value is outside the configured bounds.
         """
         validated_value = self._validate_value(value)
         self._apply_value(validated_value)
@@ -537,13 +544,15 @@ class NumericLineEdit(QLineEdit):
         self.setFixedWidth(fm.horizontalAdvance("0" * chars) + pad)
 
     def set_fmt(self, fmt: str) -> None:
-        """Update the display format and refresh the committed value.
+        """Update the display format and re-round the committed value (no signals).
 
         Args:
             fmt: New format string to apply.
         """
         self._val_fmt = self._normalize_val_fmt(fmt)
-        self._on_editing_finished()
+        self._last_value = self._value_to_formated_value(self._last_value)
+        self._set_invalid_property(False)
+        self._set_text_safely(self._value_to_text(self._last_value))
 
     # ----- focus/exit gating -----
     def focusInEvent(self, event) -> None:

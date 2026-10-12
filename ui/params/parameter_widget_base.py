@@ -13,17 +13,17 @@ T = TypeVar("T")
 class ParameterWidgetBase(QWidget, Generic[T]):
     """Provide a common interface for parameter widgets.
 
-    This base class defines a shared API for widgets that manage a typed value,
-    optional configuration data, and layout-related width settings. Subclasses
-    are expected to implement value retrieval and application logic, and may
-    optionally extend the configuration behavior.
-
     Attributes:
-        valueChanged: Emitted when the widget's value changes.
-        defaultChanged: Emitted when the widget's default value changes.
-        configChanged: Emitted when the widget's configuration changes.
+        valueChanged: Emitted when the user changes the value.
+        defaultChanged: Emitted when the user changes the default value.
+        configChanged: Emitted when the user changes the configuration.
         valueWidthChanged: Emitted when the value display width changes.
         nameWidthChanged: Emitted when the name display width changes.
+
+    Note:
+        ``valueChanged``, ``defaultChanged`` and ``configChanged`` are for
+        user actions only; programmatic setters such as ``set_value`` and
+        ``set_config`` do not emit them.
     """
 
     valueChanged = Signal(object)
@@ -40,8 +40,10 @@ class ParameterWidgetBase(QWidget, Generic[T]):
         """
 
         super().__init__(parent)
-        self._name_width: int = 0
-        self._value_width: int = 0
+        self._name_width: int = 0  # requested via set_name_width
+        self._value_width: int = 0  # requested via set_value_width
+        self._measured_name_width: int = 0  # set by subclasses
+        self._measured_value_width: int = 0  # set by subclasses
 
     def _update_layout(self) -> None:
         """Update the widget layout to reflect the current internal state.
@@ -164,38 +166,54 @@ class ParameterWidgetBase(QWidget, Generic[T]):
         _ = config
 
     def get_name_width(self) -> int:
-        """Return the current width reserved for the name label.
+        """Return the measured width of the name label.
 
         Returns:
-            Name-label width in pixels.
+            Width in pixels.
         """
-
-        return self._name_width
+        return self._measured_name_width
 
     def get_value_width(self) -> int:
-        """Return the current width reserved for the value area.
+        """Return the measured width of the value area.
 
         Returns:
-            Value-area width in pixels.
+            Width in pixels.
         """
+        return self._measured_value_width
 
-        return self._value_width
+    def _effective_name_width(self) -> int:
+        """Return the width the layout should reserve for the name label."""
+        return max(self._name_width, self._measured_name_width)
+
+    def _effective_value_width(self) -> int:
+        """Return the width the layout should reserve for the value area."""
+        return max(self._value_width, self._measured_value_width)
 
     def set_name_width(self, width: int) -> None:
-        """Set the width reserved for the name label.
+        """Set a requested minimum width for the name label.
+
+        Used to align several widgets in a panel. The layout reserves the
+        larger of this value and the label's own measured width, so a smaller
+        request never cuts the label. ``get_name_width`` still returns the
+        measured width.
 
         Args:
-            width: New name-label width in pixels.
+            width: Requested minimum width in pixels.
         """
 
         self._name_width = int(width)
         self._update_layout()
 
     def set_value_width(self, width: int) -> None:
-        """Set the width reserved for the value area.
+        """Set a requested minimum width for the value area.
+
+        Used to align several widgets in a panel. The layout reserves the
+        larger of this value and the value area's own measured width, so a
+        smaller request never cuts the value. ``get_value_width`` still
+        returns the measured width.
 
         Args:
-            width: New value-area width in pixels.
+            width: Requested minimum width in pixels.
         """
 
         self._value_width = int(width)

@@ -2,24 +2,20 @@
 
 from __future__ import annotations
 
+import numbers
 import random
-import re
-from typing import Any, Dict, Generic, List, Optional, Tuple, TypeVar
+from typing import Any, Callable, Dict, Generic, List, Optional, Tuple, TypeVar
 
-from PySide6.QtCore import QEvent, QObject, QPoint, QRect, Qt, Signal
-from PySide6.QtGui import QColor, QFontMetrics, QPainter, QPalette, QPen, QTextDocument, QShowEvent
+from PySide6.QtCore import QEvent, QObject, QRect, Qt, Signal
+from PySide6.QtGui import QColor, QFontMetrics, QPainter, QPalette, QPen, QShowEvent, QTextDocument
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QDialog,
     QDialogButtonBox,
     QFormLayout,
-    QGridLayout,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
-    QMenu,
-    QSizePolicy,
     QSpinBox,
     QStyle,
     QStyleOptionSlider,
@@ -34,220 +30,14 @@ from dialogs.dialogs import (
     range_slider_ask_extend_range,
     show_warning,
 )
-from settings.app_style import SLIDER_BORDER_STYLE_SHEET, SliderBorderState
-from settings.ui_defaults import SLIDER_LABEL_SIZE, UNIT_LABEL_SIZE
+from settings.app_style import SliderBorderState
+from settings.ui_defaults import UNIT_LABEL_SIZE
 from ui.labels import SvgLabel
-from ui.numeric_line_edit import NumericLineEdit
-from ui.params.parameter_widget_base import ParameterWidgetBase
-from ui.params.sliders import FloatSlider
-from ui.right_click_overlay import RightClickOverlay
-from utils.helper_funcs import get_numeric_format_field, value_to_text
+from ui.params.slider_base import SliderFeature, SliderWidgetBase
+from ui.params.sliders import EditConfigDialog, FloatSlider, make_line_edit
+from utils.helper_funcs import format_is_valid, get_numeric_format_field
 
 TNum = TypeVar("TNum", int, float)
-
-
-def _map_val_to_pos(v: float, v_min: float, v_max: float, p_min: int, p_max: int) -> int:
-    """Map a numeric value linearly to an integer position.
-
-    Args:
-        v: Numeric value to map.
-        v_min: Minimum value of the source interval.
-        v_max: Maximum value of the source interval.
-        p_min: Minimum integer position of the destination interval.
-        p_max: Maximum integer position of the destination interval.
-
-    Returns:
-        Rounded integer position.
-
-    Note:
-        If ``v_min == v_max``, the mapping is degenerate and ``p_min`` is
-        returned.
-    """
-    if v_max == v_min:
-        return p_min
-    t = (v - v_min) / (v_max - v_min)
-    return int(round(p_min + t * (p_max - p_min)))
-
-
-def _map_pos_to_val(p: int, p_min: int, p_max: int, v_min: float, v_max: float) -> float:
-    """Map an integer position linearly to a numeric value.
-
-    Args:
-        p: Integer position to map.
-        p_min: Minimum position of the source interval.
-        p_max: Maximum position of the source interval.
-        v_min: Minimum value of the destination interval.
-        v_max: Maximum value of the destination interval.
-
-    Returns:
-        Interpolated numeric value.
-
-    Note:
-        If ``p_min == p_max``, the mapping is degenerate and ``v_min`` is
-        returned.
-    """
-    if p_max == p_min:
-        return v_min
-    t = (p - p_min) / (p_max - p_min)
-    return v_min + t * (v_max - v_min)
-
-
-def make_line_edit(
-    value_is_int: bool,
-    init_value: TNum,
-    fmt: str,
-    min_limit: TNum,
-    max_limit: TNum,
-    min_limit_inclusive: bool,
-    max_limit_inclusive: bool,
-) -> NumericLineEdit:
-    """Create a numeric line edit suitable for range-slider dialogs.
-
-    Args:
-        value_is_int: Whether the editor should parse integer values.
-        init_value: Initial value shown in the line edit.
-        fmt: Slider display format string.
-        min_limit: Lower allowed hard limit.
-        max_limit: Upper allowed hard limit.
-        min_limit_inclusive: Whether the lower limit is inclusive.
-        max_limit_inclusive: Whether the upper limit is inclusive.
-
-    Returns:
-        Configured numeric line edit widget.
-    """
-    val_fmt = get_numeric_format_field(fmt)
-    return NumericLineEdit(
-        init_val=init_value,
-        value_is_int=value_is_int,
-        val_fmt=val_fmt,
-        min_limit=min_limit,
-        max_limit=max_limit,
-        min_limit_inclusive=min_limit_inclusive,
-        max_limit_inclusive=max_limit_inclusive,
-    )
-
-
-class EditConfigDialog(QDialog, Generic[TNum]):
-    """Dialog for editing a range slider's configuration."""
-
-    def __init__(
-        self,
-        range_slider_name: str,
-        value_is_int: bool,
-        min_val: TNum,
-        max_val: TNum,
-        fmt: str,
-        min_limit: TNum | None,
-        max_limit: TNum | None,
-        min_limit_inclusive: bool,
-        max_limit_inclusive: bool,
-        show_range: bool = True,
-        show_range_enabled: bool = True,
-        parent: Optional[QWidget] = None,
-    ):
-        """Initialize the configuration dialog.
-
-        Args:
-            range_slider_name: Display name of the range slider.
-            value_is_int: Whether the slider uses integer values.
-            min_val: Current minimum value.
-            max_val: Current maximum value.
-            fmt: Current display format string.
-            min_limit: Optional lower hard limit.
-            max_limit: Optional upper hard limit.
-            min_limit_inclusive: Whether the lower hard limit is inclusive.
-            max_limit_inclusive: Whether the upper hard limit is inclusive.
-            show_range: Initial state of the range-visibility option.
-            show_range_enabled: Whether the range-visibility option is editable.
-            parent: Optional parent widget.
-        """
-        super().__init__(parent)
-        self.setWindowTitle("Edit Configuration")
-
-        self._show_range = show_range
-        self._show_range_enabled = show_range_enabled
-        self._value_is_int = value_is_int
-        self._edit_min = make_line_edit(
-            value_is_int,
-            min_val,
-            fmt,
-            min_limit,
-            max_limit,
-            min_limit_inclusive,
-            max_limit_inclusive,
-        )
-        self._edit_max = make_line_edit(
-            value_is_int,
-            max_val,
-            fmt,
-            min_limit,
-            max_limit,
-            min_limit_inclusive,
-            max_limit_inclusive,
-        )
-        self._edit_fmt = QLineEdit(fmt)
-        self._cb_ticks = QCheckBox("Show Range", self)
-        self._cb_ticks.setChecked(show_range)
-        self._cb_ticks.setEnabled(show_range_enabled)
-
-        self._edit_fmt.editingFinished.connect(self._fmt_changed)
-
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, parent=self)
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-
-        form = QFormLayout(self)
-        form.addRow("Range Slider:", SvgLabel(range_slider_name, alignment=Qt.AlignLeft | Qt.AlignVCenter))
-        form.addRow(self._cb_ticks)
-        form.addRow("Min:", self._edit_min)
-        form.addRow("Max:", self._edit_max)
-        form.addRow("Format:", self._edit_fmt)
-        form.addRow(buttons)
-
-        self.setSizeGripEnabled(False)
-        self.adjustSize()
-        self.setFixedSize(self.size())
-
-    def _fmt_changed(self) -> None:
-        """Update numeric validators after the format field changes."""
-        fmt = get_numeric_format_field(self._edit_fmt.text())
-        self._edit_min.set_fmt(fmt)
-        self._edit_max.set_fmt(fmt)
-
-    def accept(self) -> None:
-        """Validate the dialog state and accept it when valid."""
-        range_min = self._edit_min.get_value()
-        range_max = self._edit_max.get_value()
-
-        if range_max <= range_min:
-            show_warning("Invalid range", "Min must be less than Max", parent=self)
-            return
-
-        super().accept()
-
-    def get_values(self) -> Tuple[TNum, TNum, str, bool]:
-        """Return the validated dialog values.
-
-        Returns:
-            Tuple containing minimum value, maximum value, format string, and
-            range-visibility flag.
-        """
-        return (
-            self._edit_min.get_value(),
-            self._edit_max.get_value(),
-            self._edit_fmt.text(),
-            self._cb_ticks.isChecked(),
-        )
-
-    def showEvent(self, event: QShowEvent) -> None:
-        """Focus the minimum editor when the dialog is shown.
-
-        Args:
-            event: Qt show event.
-        """
-        super().showEvent(event)
-        self._edit_min.setFocus()
-        self._edit_min.selectAll()
 
 
 class SetValuesDialog(QDialog, Generic[TNum]):
@@ -264,6 +54,7 @@ class SetValuesDialog(QDialog, Generic[TNum]):
         max_limit: TNum | None,
         min_limit_inclusive: bool,
         max_limit_inclusive: bool,
+        validate: Callable[[TNum, TNum], str | None],
         parent: Optional[QWidget] = None,
     ):
         """Initialize the value-pair dialog.
@@ -278,28 +69,19 @@ class SetValuesDialog(QDialog, Generic[TNum]):
             max_limit: Optional upper hard limit.
             min_limit_inclusive: Whether the lower hard limit is inclusive.
             max_limit_inclusive: Whether the upper hard limit is inclusive.
+            validate: Callable checking (lower, upper); returns an error
+                message or None.
             parent: Optional parent widget.
         """
         super().__init__(parent)
         self.setWindowTitle("Set Values")
+        self._validate = validate
 
         self._edit_lower = make_line_edit(
-            value_is_int,
-            current_lower,
-            fmt,
-            min_limit,
-            max_limit,
-            min_limit_inclusive,
-            max_limit_inclusive,
+            value_is_int, current_lower, fmt, min_limit, max_limit, min_limit_inclusive, max_limit_inclusive
         )
         self._edit_upper = make_line_edit(
-            value_is_int,
-            current_upper,
-            fmt,
-            min_limit,
-            max_limit,
-            min_limit_inclusive,
-            max_limit_inclusive,
+            value_is_int, current_upper, fmt, min_limit, max_limit, min_limit_inclusive, max_limit_inclusive
         )
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, parent=self)
@@ -318,17 +100,14 @@ class SetValuesDialog(QDialog, Generic[TNum]):
 
     def accept(self) -> None:
         """Validate the lower and upper values before accepting."""
-        lower = self._edit_lower.get_value()
-        upper = self._edit_upper.get_value()
-
-        if upper < lower:
-            show_warning("Invalid range", "Lower must be less than or equal to upper.", parent=self)
+        msg = self._validate(self._edit_lower.get_value(), self._edit_upper.get_value())
+        if msg:
+            show_warning("Invalid values", msg, parent=self)
             return
-
         super().accept()
 
     def get_values(self) -> Tuple[TNum, TNum]:
-        """Return the validated lower and upper values.
+        """Return the lower and upper values.
 
         Returns:
             Tuple containing the lower and upper values.
@@ -402,7 +181,7 @@ class SetMarginsDialog(QDialog):
         return sb
 
     def get_values(self) -> Tuple[int, int]:
-        """Return the validated margin values.
+        """Return the margin values.
 
         Returns:
             Tuple containing lower and upper margins.
@@ -441,6 +220,9 @@ class DualHandleSlider(QWidget):
             values: Initial lower and upper values.
             orientation: Slider orientation.
             parent: Optional parent widget.
+
+        Raises:
+            ValueError: If ``maximum <= minimum``.
         """
         super().__init__(parent)
 
@@ -465,11 +247,7 @@ class DualHandleSlider(QWidget):
         self._validate()
 
     def _is_horizontal(self):
-        """Return whether the slider orientation is horizontal.
-
-        Returns:
-            ``True`` for horizontal sliders, otherwise ``False``.
-        """
+        """Return whether the slider orientation is horizontal."""
         return self._orientation == Qt.Horizontal
 
     def _pixel_min(self):
@@ -487,23 +265,23 @@ class DualHandleSlider(QWidget):
         return max(1, self._pixel_max() - self._pixel_min())
 
     def _value_to_pixel(self, value):
-        """Convert a logical value to a pixel coordinate.
+        """Convert a logical value to a coordinate along the slider axis.
 
         Args:
             value: Logical slider value.
 
         Returns:
-            Pixel coordinate along the slider axis.
+            Axis coordinate (measured from the minimum end).
         """
         value = max(self._min, min(value, self._max))
         frac = (value - self._min) / (self._max - self._min)
         return int(round(self._pixel_min() + frac * self._pixel_span()))
 
     def _pixel_to_value(self, pixel):
-        """Convert a pixel coordinate to a logical slider value.
+        """Convert an axis coordinate to a logical slider value.
 
         Args:
-            pixel: Pixel coordinate along the slider axis.
+            pixel: Coordinate along the slider axis.
 
         Returns:
             Logical slider value.
@@ -511,18 +289,6 @@ class DualHandleSlider(QWidget):
         pixel = max(self._pixel_min(), min(pixel, self._pixel_max()))
         frac = (pixel - self._pixel_min()) / self._pixel_span()
         return self._min + frac * (self._max - self._min)
-
-    def _lower_center(self):
-        """Return the center point of the lower handle."""
-        if self._is_horizontal():
-            return QPoint(self._value_to_pixel(self._lower), self.height() // 2)
-        return QPoint(self.width() // 2, self._value_to_pixel(self._lower))
-
-    def _upper_center(self):
-        """Return the center point of the upper handle."""
-        if self._is_horizontal():
-            return QPoint(self._value_to_pixel(self._upper), self.height() // 2)
-        return QPoint(self.width() // 2, self._value_to_pixel(self._upper))
 
     def _style_option(self, value: float) -> QStyleOptionSlider:
         """Build a style option describing a handle at a given value.
@@ -570,18 +336,6 @@ class DualHandleSlider(QWidget):
         frac = (value - self._min) / (self._max - self._min)
         return int(round(frac * 10000))
 
-    def _style_pos_to_value(self, pos: int) -> float:
-        """Convert a style slider position to a logical value.
-
-        Args:
-            pos: Style slider position.
-
-        Returns:
-            Logical slider value.
-        """
-        frac = pos / 10000.0
-        return self._min + frac * (self._max - self._min)
-
     def _hit_test(self, pos):
         """Return which handle contains the given point.
 
@@ -621,7 +375,9 @@ class DualHandleSlider(QWidget):
         Returns:
             Coordinate along the logical slider axis.
         """
-        return pos.x() if self._is_horizontal() else self._pixel_max() - pos.y()
+        if self._is_horizontal():
+            return pos.x()
+        return self._pixel_min() + self._pixel_max() - pos.y()
 
     def _closest_handle(self, pos):
         """Return the handle closest to a point.
@@ -632,24 +388,21 @@ class DualHandleSlider(QWidget):
         Returns:
             ``"lower"`` or ``"upper"``.
         """
-        p = self._pos_along_slider(pos)
-
-        lower_center = self._handle_rect(self._lower).center()
-        upper_center = self._handle_rect(self._upper).center()
-
-        lower_p = lower_center.x() if self._is_horizontal() else -lower_center.y()
-        upper_p = upper_center.x() if self._is_horizontal() else -upper_center.y()
-
-        dl = abs(p - lower_p)
-        du = abs(p - upper_p)
-
+        lower_c = self._handle_rect(self._lower).center()
+        upper_c = self._handle_rect(self._upper).center()
+        if self._is_horizontal():
+            dl = abs(pos.x() - lower_c.x())
+            du = abs(pos.x() - upper_c.x())
+        else:
+            dl = abs(pos.y() - lower_c.y())
+            du = abs(pos.y() - upper_c.y())
         return "lower" if dl <= du else "upper"
 
     def _clamp_pixel(self, pixel: int):
-        """Clamp a dragged handle to a valid pixel position.
+        """Move the active handle to a valid axis coordinate.
 
         Args:
-            pixel: Proposed pixel position along the slider axis.
+            pixel: Proposed coordinate along the slider axis.
         """
         if self._active_handle == "lower":
             p_up = self._value_to_pixel(self._upper)
@@ -671,8 +424,7 @@ class DualHandleSlider(QWidget):
             return
         painter.save()
         pen = painter.pen()
-        c = self.palette().color(QPalette.Disabled, QPalette.WindowText)
-        pen.setColor(c)
+        pen.setColor(self.palette().color(QPalette.Disabled, QPalette.WindowText))
         painter.setPen(pen)
 
         n = max(2, self._tick_count)
@@ -680,7 +432,6 @@ class DualHandleSlider(QWidget):
         if self._is_horizontal():
             y1 = groove_rect.bottom() + 6
             y2 = y1 + 3
-
             for i in range(n):
                 frac = i / (n - 1)
                 x = int(round(self._pixel_min() + frac * self._pixel_span()))
@@ -688,7 +439,6 @@ class DualHandleSlider(QWidget):
         else:
             x1 = groove_rect.right() + 6
             x2 = x1 + 3
-
             for i in range(n):
                 frac = i / (n - 1)
                 y = int(round(self._pixel_max() - frac * self._pixel_span()))
@@ -696,16 +446,16 @@ class DualHandleSlider(QWidget):
         painter.restore()
 
     def _validate(self):
-        """Validate the configured slider range."""
+        """Validate the configured slider range.
+
+        Raises:
+            ValueError: If ``maximum <= minimum``.
+        """
         if self._max <= self._min:
             raise ValueError("maximum must be greater than minimum")
 
     def values(self):
-        """Return the current lower and upper values.
-
-        Returns:
-            Tuple containing lower and upper slider values.
-        """
+        """Return the current lower and upper values."""
         return self._lower, self._upper
 
     def setValues(self, values):
@@ -727,9 +477,14 @@ class DualHandleSlider(QWidget):
         Args:
             minimum: New minimum value.
             maximum: New maximum value.
+
+        Raises:
+            ValueError: If ``maximum <= minimum``.
         """
-        self._min = float(minimum)
-        self._max = float(maximum)
+        minimum, maximum = float(minimum), float(maximum)
+        if maximum <= minimum:
+            raise ValueError("maximum must be greater than minimum")
+        self._min, self._max = minimum, maximum
         self.setValues((self._lower, self._upper))
 
     def orientation(self):
@@ -755,7 +510,7 @@ class DualHandleSlider(QWidget):
         self.update()
 
     def mousePressEvent(self, event):
-        """Handle the Qt mouse press callback.
+        """Pick a handle and move it to the click position.
 
         Args:
             event: Qt mouse event.
@@ -765,17 +520,15 @@ class DualHandleSlider(QWidget):
 
         pos = event.position().toPoint()
         handle = self._hit_test(pos)
-
         if handle is None:
             handle = self._closest_handle(pos)
 
         self._active_handle = handle
-        pixel = self._pos_along_slider(pos)
-        self._clamp_pixel(pixel)
+        self._clamp_pixel(self._pos_along_slider(pos))
         event.accept()
 
     def mouseMoveEvent(self, event):
-        """Handle the Qt mouse move callback.
+        """Drag the active handle.
 
         Args:
             event: Qt mouse event.
@@ -783,13 +536,11 @@ class DualHandleSlider(QWidget):
         if self._active_handle is None:
             return super().mouseMoveEvent(event)
 
-        p = event.position().toPoint()
-        pixel = p.x() if self._is_horizontal() else self._pixel_max() - p.y()
-        self._clamp_pixel(pixel)
+        self._clamp_pixel(self._pos_along_slider(event.position().toPoint()))
         event.accept()
 
     def mouseReleaseEvent(self, event):
-        """Handle the Qt mouse release callback.
+        """Release the active handle.
 
         Args:
             event: Qt mouse event.
@@ -822,60 +573,34 @@ class DualHandleSlider(QWidget):
         painter.restore()
 
         if self.isEnabled():
+            active_opt = self._style_option(self._upper)
+            active_opt.subControls = QStyle.SC_SliderGroove
             if self._is_horizontal():
                 left = lower_handle_rect.center().x()
                 right = upper_handle_rect.center().x()
-
                 if right > left:
-                    active_opt = self._style_option(self._upper)
-                    active_opt.subControls = QStyle.SC_SliderGroove
-
                     painter.save()
-                    painter.setClipRect(
-                        QRect(
-                            left,
-                            groove_rect.top() - 2,
-                            right - left + 1,
-                            groove_rect.height() + 4,
-                        )
-                    )
+                    painter.setClipRect(QRect(left, groove_rect.top() - 2, right - left + 1, groove_rect.height() + 4))
                     painter.drawComplexControl(QStyle.CC_Slider, active_opt)
                     painter.restore()
             else:
                 top = upper_handle_rect.center().y()
                 bottom = lower_handle_rect.center().y()
-
                 if bottom > top:
-                    active_opt = self._style_option(self._upper)
-                    active_opt.subControls = QStyle.SC_SliderGroove
-
                     painter.save()
-                    painter.setClipRect(
-                        QRect(
-                            groove_rect.left() - 2,
-                            top,
-                            groove_rect.width() + 4,
-                            bottom - top + 1,
-                        )
-                    )
+                    painter.setClipRect(QRect(groove_rect.left() - 2, top, groove_rect.width() + 4, bottom - top + 1))
                     painter.drawComplexControl(QStyle.CC_Slider, active_opt)
                     painter.restore()
 
         self._draw_ticks(painter, groove_rect)
 
-        lower_handle_opt = self._style_option(self._lower)
-        lower_handle_opt.subControls = QStyle.SC_SliderHandle
-        if self._active_handle == "lower" and self.isEnabled():
-            lower_handle_opt.activeSubControls = QStyle.SC_SliderHandle
-            lower_handle_opt.state |= QStyle.State_Sunken
-        painter.drawComplexControl(QStyle.CC_Slider, lower_handle_opt)
-
-        upper_handle_opt = self._style_option(self._upper)
-        upper_handle_opt.subControls = QStyle.SC_SliderHandle
-        if self._active_handle == "upper" and self.isEnabled():
-            upper_handle_opt.activeSubControls = QStyle.SC_SliderHandle
-            upper_handle_opt.state |= QStyle.State_Sunken
-        painter.drawComplexControl(QStyle.CC_Slider, upper_handle_opt)
+        for handle, value in (("lower", self._lower), ("upper", self._upper)):
+            opt = self._style_option(value)
+            opt.subControls = QStyle.SC_SliderHandle
+            if self._active_handle == handle and self.isEnabled():
+                opt.activeSubControls = QStyle.SC_SliderHandle
+                opt.state |= QStyle.State_Sunken
+            painter.drawComplexControl(QStyle.CC_Slider, opt)
 
 
 class RangeMarkerOverlay(QWidget):
@@ -961,7 +686,6 @@ class RangeMarkerOverlay(QWidget):
             self._slider,
         )
         handle_rect = self._slider._handle_rect(value)
-
         if groove_rect.isNull() or handle_rect.isNull():
             return
 
@@ -979,18 +703,28 @@ class RangeMarkerOverlay(QWidget):
         """
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing, False)
-
         pen = QPen(self._current_color())
         pen.setWidth(self._thickness)
         p.setPen(pen)
-
         self._draw_one_marker(p, float(self._lower_value_fn()))
         self._draw_one_marker(p, float(self._upper_value_fn()))
         p.end()
 
 
-class LabeledRangeSliderBase(ParameterWidgetBase[tuple], Generic[TNum]):
-    """Base widget for labeled range sliders built on ``DualHandleSlider``."""
+class LabeledRangeSliderBase(SliderWidgetBase[Any], Generic[TNum]):
+    """Base widget for labeled range sliders built on ``DualHandleSlider``.
+
+    Frame, menu, layout, widths and events come from ``SliderWidgetBase``; this
+    class adds the ``[lower, upper]`` display and the range-specific hooks.
+
+    Signals ``valueChanged``, ``defaultChanged`` and ``configChanged`` are
+    emitted only for user actions (dragging, context menu, dialogs).
+    Programmatic setters never emit them.
+    """
+
+    _RANGE_MARGIN_H = 3
+    _RANGE_MARGIN_V = 3
+    value_is_int: bool = False
 
     def __init__(
         self,
@@ -998,10 +732,11 @@ class LabeledRangeSliderBase(ParameterWidgetBase[tuple], Generic[TNum]):
         unit: str,
         min_val: TNum,
         max_val: TNum,
-        init_vals: Tuple[TNum, TNum],
+        init_vals: Optional[Tuple[TNum, TNum]],
         orientation: Qt.Orientation,
         val_fmt: str,
         show_range: bool,
+        features: SliderFeature,
         parent: Optional[QWidget],
     ):
         """Initialize the labeled range-slider base widget.
@@ -1011,49 +746,41 @@ class LabeledRangeSliderBase(ParameterWidgetBase[tuple], Generic[TNum]):
             unit: Optional unit label.
             min_val: Initial minimum value.
             max_val: Initial maximum value.
-            init_vals: Initial lower and upper values.
+            init_vals: Initial lower and upper values, or ``None`` for 25 % /
+                75 % of the range.
             orientation: Slider orientation.
             val_fmt: Value display format string.
-            show_range: Whether range labels and ticks should be shown.
+            show_range: Initial visibility of range labels and ticks; change
+                later with ``set_show_range``.
+            features: Context-menu features offered by the slider.
             parent: Optional parent widget.
         """
-        super().__init__(parent)
+        super().__init__(
+            label=label,
+            orientation=orientation,
+            val_fmt=val_fmt,
+            show_range=show_range,
+            features=features,
+            parent=parent,
+        )
 
-        self.setObjectName("labeled_slider")
-        self.setAttribute(Qt.WA_StyledBackground, True)
-        self.setStyleSheet(SLIDER_BORDER_STYLE_SHEET)
-        self.set_border(SliderBorderState.OFF)
-
-        self._label_text = label
+        self._unit = unit
         self._min_value = min_val
         self._max_value = max_val
-        self._orient = orientation
-        self._show_range = show_range
-        self._value_fmt = val_fmt
-        self._eval_fmt = ""
-        self._update_eval_fmt()
-        self._use_sci_html = False
-        self._right_click_enable = True
 
         if init_vals is None:
             span = max_val - min_val
-            lo, hi = (
-                self.evaluate_value(min_val + 0.25 * span),
-                self.evaluate_value(min_val + 0.75 * span),
-            )
+            lo = self.evaluate_value(min_val + 0.25 * span)
+            hi = self.evaluate_value(min_val + 0.75 * span)
         else:
             lo = self.evaluate_value(init_vals[0])
             hi = self.evaluate_value(init_vals[1])
-
-        if hi < lo:
-            lo, hi = hi, lo
 
         self._current_lower = lo
         self._current_upper = hi
         self._default_lower = lo
         self._default_upper = hi
 
-        self._name_label = SvgLabel(label, parent=self, font_size=SLIDER_LABEL_SIZE)
         self._value_wrap = QWidget(self)
         self._value_l_label = self._make_value_label("[")
         self._value_lo_label = self._make_value_label("")
@@ -1063,54 +790,28 @@ class LabeledRangeSliderBase(ParameterWidgetBase[tuple], Generic[TNum]):
         hl = QHBoxLayout(self._value_wrap)
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(0)
-        hl.addWidget(self._value_l_label)
-        hl.addWidget(self._value_lo_label)
-        hl.addWidget(self._value_c_label)
-        hl.addWidget(self._value_hi_label)
-        hl.addWidget(self._value_r_label)
+        for w in (self._value_l_label, self._value_lo_label, self._value_c_label,
+                  self._value_hi_label, self._value_r_label):
+            hl.addWidget(w)
         if unit:
             self._unit_label = SvgLabel(f"({unit})", parent=self, fix_size=True, font_size=UNIT_LABEL_SIZE)
             hl.addWidget(self._unit_label)
         hl.addStretch(1)
-        self._min_label = QLabel()
-        self._max_label = QLabel()
-        self._min_label.setObjectName("slider_range")
-        self._max_label.setObjectName("slider_range")
 
-        self._slider = DualHandleSlider(
-            minimum=float(min_val),
-            maximum=float(max_val),
-            values=(float(lo), float(hi)),
-            orientation=orientation,
-            parent=self,
+        self._attach_slider(
+            DualHandleSlider(
+                minimum=float(min_val),
+                maximum=float(max_val),
+                values=(float(lo), float(hi)),
+                orientation=orientation,
+                parent=self,
+            )
         )
-
-        self._default_red_marker = RangeMarkerOverlay(
-            self._slider,
-            lower_value_fn=lambda: float(self._default_lower),
-            upper_value_fn=lambda: float(self._default_upper),
-            thickness=2,
-        )
-
-        self._right_click_overlay = RightClickOverlay(
-            target_widget=self._slider,
-            owner_widget=self,
-            parent=self,
-        )
-        self._right_click_overlay.hide()
-
-        self._right_click_items: List[Dict[str, Any]] = [
-            {"id": "save_as_default", "text": "Save as Default"},
-            {"id": "reset_to_default", "text": "Reset to Default"},
-        ]
-
-        self._name_width = self._name_label.sizeHint().width()
-        self._value_width = 0
-
         self.set_format(val_fmt)
         self._make_layout()
 
-    def _make_value_label(self, text: str) -> QLabel:
+    @staticmethod
+    def _make_value_label(text: str) -> QLabel:
         """Create a QLabel used in the formatted range display.
 
         Args:
@@ -1119,91 +820,99 @@ class LabeledRangeSliderBase(ParameterWidgetBase[tuple], Generic[TNum]):
         Returns:
             Configured value label.
         """
-        l = QLabel(text)
-        l.setObjectName("slider_value")
-        return l
+        label = QLabel(text)
+        label.setObjectName("slider_value")
+        return label
 
-    def _make_layout(self):
-        """Build the widget layout for the current orientation."""
-        gl = QGridLayout(self)
-        gl.setContentsMargins(0, 0, 0, 0)
+    # ----- SliderWidgetBase hooks -----
+    def _make_default_marker(self) -> QWidget:
+        """Create the two default-value markers."""
+        return RangeMarkerOverlay(
+            self._slider,
+            lower_value_fn=lambda: float(self._default_lower),
+            upper_value_fn=lambda: float(self._default_upper),
+            thickness=2,
+        )
 
-        slider_wrap = QWidget()
-        vl = QVBoxLayout(slider_wrap)
-        vl.setContentsMargins(0, 0, 0, 0)
-        vl.setSpacing(0)
-        vl.addWidget(self._slider)
+    def _value_widget(self) -> QWidget:
+        """Return the ``[lower, upper]`` display with its unit."""
+        return self._value_wrap
 
-        if self._orient == Qt.Horizontal:
-            gl.setVerticalSpacing(0)
-            com = Qt.AlignVCenter
+    def _align_value_labels(self, horizontal: bool) -> None:
+        """Align the five value labels for the orientation.
 
-            self._name_label.setAlignment(com | Qt.AlignRight)
-
-            self._value_l_label.setAlignment(com)
-            self._value_lo_label.setAlignment(com | Qt.AlignLeft)
-            self._value_c_label.setAlignment(com)
-            self._value_hi_label.setAlignment(com | Qt.AlignLeft)
-            self._value_r_label.setAlignment(com)
-
-            gl.addWidget(self._name_label, 0, 0, com | Qt.AlignRight)
-            gl.addWidget(slider_wrap, 0, 1, 1, 3, com)
-            gl.addWidget(self._value_wrap, 0, 4, com | Qt.AlignLeft)
-            gl.addWidget(self._min_label, 1, 1)
-            gl.addWidget(self._max_label, 1, 3)
-
-            self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-            gl.setColumnStretch(2, 1)
+        Args:
+            horizontal: Whether the layout is horizontal.
+        """
+        if horizontal:
+            fixed = Qt.AlignVCenter
+            value = Qt.AlignVCenter | Qt.AlignLeft
         else:
-            gl.setHorizontalSpacing(0)
-            gl.setVerticalSpacing(2)
-            com = Qt.AlignHCenter
+            fixed = Qt.AlignHCenter | Qt.AlignVCenter
+            value = Qt.AlignLeft | Qt.AlignVCenter
+        for label in (self._value_l_label, self._value_c_label, self._value_r_label):
+            label.setAlignment(fixed)
+        for label in (self._value_lo_label, self._value_hi_label):
+            label.setAlignment(value)
 
-            self._value_l_label.setAlignment(com | Qt.AlignVCenter)
-            self._value_lo_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-            self._value_c_label.setAlignment(com | Qt.AlignVCenter)
-            self._value_hi_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-            self._value_r_label.setAlignment(com | Qt.AlignVCenter)
+    def _value_text_labels(self) -> List[QLabel]:
+        """Return the labels whose text format follows the value format."""
+        return [self._value_lo_label, self._value_hi_label, self._min_label, self._max_label]
 
-            self._name_label.setAlignment(com | Qt.AlignTop)
+    def _round_values_to_format(self) -> None:
+        """Round current, default, min and max to the current format."""
+        self._current_lower = self.evaluate_value(self._current_lower)
+        self._current_upper = self.evaluate_value(self._current_upper)
+        self._default_lower = self.evaluate_value(self._default_lower)
+        self._default_upper = self.evaluate_value(self._default_upper)
+        self._min_value = self.evaluate_value(self._min_value)
+        self._max_value = self.evaluate_value(self._max_value)
 
-            self._max_label.setContentsMargins(5, 0, 0, 0)
-            self._min_label.setContentsMargins(5, 0, 0, 1)
+    def _apply_range_visibility(self, show: bool) -> None:
+        """Show or hide the slider ticks.
 
-            gl.addWidget(self._value_wrap, 0, 0, 1, 3, com | Qt.AlignBottom)
-            gl.addWidget(slider_wrap, 1, 1, 3, 1, com)
-            gl.addWidget(self._name_label, 4, 0, 1, 3, com | Qt.AlignTop)
-            gl.addWidget(self._max_label, 1, 2, 1, 2)
-            gl.addWidget(self._min_label, 3, 2, 1, 2)
+        Args:
+            show: Whether range ticks should be shown.
+        """
+        self._slider.setShowTicks(show)
 
-            self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
-            gl.setRowStretch(2, 1)
+    def _update_value_width(self) -> None:
+        """Measure the width required by the ``[lower, upper]`` display."""
+        l = self._value_lo_label
+        l.ensurePolished()
+        values = self._iter_width_values(max_samples=200)
 
-        self._gl = gl
-        self._vl = vl
-        self._right_click_overlay.sync_to_target()
+        value_w = 0
+        if l.textFormat() == Qt.PlainText:
+            fm = QFontMetrics(l.font())
+            for v in values:
+                value_w = max(value_w, fm.horizontalAdvance(self._value_to_text(v)))
+        else:
+            doc = QTextDocument()
+            doc.setDefaultFont(l.font())
+            doc.setTextWidth(-1)
+            if self._orient == Qt.Horizontal:
+                doc.setDocumentMargin(0)
+            for v in values:
+                doc.setHtml(self._value_to_text(v))
+                value_w = max(value_w, int(doc.idealWidth()))
 
-    def evaluate_value(self, value: TNum) -> TNum:
-        """Normalize a value according to the current evaluation format.
+        self._value_lo_label.setFixedWidth(value_w)
+        self._value_hi_label.setFixedWidth(value_w)
+        self._set_measured_value_width(self._value_wrap.sizeHint().width())
+
+    # ----- value handling -----
+    def evaluate_value(self, value: TNum, eval_fmt: str | None = None) -> TNum:
+        """Normalize a value according to the evaluation format.
 
         Args:
             value: Value to normalize.
+            eval_fmt: Format to use instead of the current one.
 
         Returns:
             Normalized typed value.
         """
         raise NotImplementedError
-
-    def _value_to_text(self, value: TNum) -> str:
-        """Format a single value for display.
-
-        Args:
-            value: Value to format.
-
-        Returns:
-            Formatted display text.
-        """
-        return value_to_text(value=value, fmt=self._value_fmt)
 
     def _range_to_text(self, values: Tuple[TNum, TNum]) -> str:
         """Format a lower/upper pair for display.
@@ -1217,10 +926,6 @@ class LabeledRangeSliderBase(ParameterWidgetBase[tuple], Generic[TNum]):
         lo, hi = values
         return f"[{self._value_to_text(lo)} , {self._value_to_text(hi)}]"
 
-    def _update_eval_fmt(self) -> None:
-        """Update the internal evaluation format from the display format."""
-        self._eval_fmt = get_numeric_format_field(self._value_fmt)
-
     def _update_value_label(self) -> None:
         """Refresh the lower and upper value labels."""
         self._value_lo_label.setText(self._value_to_text(self._current_lower))
@@ -1231,6 +936,11 @@ class LabeledRangeSliderBase(ParameterWidgetBase[tuple], Generic[TNum]):
         self._update_value_label()
         self._min_label.setText(self._value_to_text(self._min_value))
         self._max_label.setText(self._value_to_text(self._max_value))
+
+    def _update_marker(self) -> None:
+        """Repaint the default markers, if any."""
+        if self._default_red_marker is not None:
+            self._default_red_marker.update()
 
     def _iter_width_values(self, max_samples: int = 200) -> list[TNum]:
         """Generate representative values for width measurement.
@@ -1245,8 +955,7 @@ class LabeledRangeSliderBase(ParameterWidgetBase[tuple], Generic[TNum]):
         b = self.evaluate_value(self._max_value)
 
         if self.value_is_int:
-            mn = int(a)
-            mx = int(b)
+            mn, mx = int(a), int(b)
             span = mx - mn
             if span <= max_samples:
                 return [self.evaluate_value(v) for v in range(mn, mx + 1)]
@@ -1259,18 +968,15 @@ class LabeledRangeSliderBase(ParameterWidgetBase[tuple], Generic[TNum]):
                 int(self._default_lower),
                 int(self._default_upper),
             }
-
             n_lin = min(max_samples - len(vals), 100)
             for k in range(1, n_lin + 1):
                 vals.add(mn + (span * k) // (n_lin + 1))
 
             rng = random.Random(0)
-            max_tries = 10 * max_samples
             tries = 0
-            while len(vals) < max_samples and tries < max_tries:
+            while len(vals) < max_samples and tries < 10 * max_samples:
                 vals.add(rng.randint(mn, mx))
                 tries += 1
-
             return [self.evaluate_value(v) for v in sorted(vals)]
 
         vals = []
@@ -1284,97 +990,19 @@ class LabeledRangeSliderBase(ParameterWidgetBase[tuple], Generic[TNum]):
                 seen.add(key)
                 vals.append(v)
 
-        special = [
-            a,
-            b,
-            self._current_lower,
-            self._current_upper,
-            self._default_lower,
-            self._default_upper,
-        ]
-        for v in special:
+        for v in (a, b, self._current_lower, self._current_upper, self._default_lower, self._default_upper):
             add(v)
 
         n_lin = min(max_samples, 100)
-        if n_lin > 0:
-            for k in range(n_lin + 1):
-                frac = k / n_lin
-                add(a + frac * (b - a))
+        for k in range(n_lin + 1):
+            add(a + k / n_lin * (b - a))
 
         rng = random.Random(0)
-        max_tries = 20 * max_samples
         tries = 0
-        while len(vals) < max_samples and tries < max_tries:
+        while len(vals) < max_samples and tries < 20 * max_samples:
             add(rng.uniform(a, b))
             tries += 1
-
         return vals
-
-    def _update_value_width(self) -> None:
-        """Measure and cache the width required by the formatted range display."""
-        old_w = self._value_width
-        l = self._value_lo_label
-        l.ensurePolished()
-        fmt = l.textFormat()
-        values = self._iter_width_values(max_samples=200)
-
-        value_w = 0
-        if fmt == Qt.PlainText:
-            fm = QFontMetrics(l.font())
-            for v in values:
-                text = self._value_to_text(v)
-                value_w = max(value_w, fm.horizontalAdvance(text))
-        else:
-            doc = QTextDocument()
-            doc.setDefaultFont(l.font())
-            doc.setTextWidth(-1)
-            if self._orient == Qt.Horizontal:
-                doc.setDocumentMargin(0)
-            for v in values:
-                html = self._value_to_text(v)
-                doc.setHtml(html)
-                value_w = max(value_w, int(doc.idealWidth()))
-
-        self._value_lo_label.setFixedWidth(value_w)
-        self._value_hi_label.setFixedWidth(value_w)
-        new_w = self._value_wrap.sizeHint().width()
-
-        self._value_width = new_w
-        self._update_layout()
-        if old_w != new_w:
-            self.valueWidthChanged.emit(new_w)
-
-    def _update_layout(self):
-        """Apply range-label visibility and width constraints."""
-        show_range = self._show_range
-
-        if show_range:
-            self._slider.setShowTicks(True)
-            self._max_label.show()
-            self._min_label.show()
-        else:
-            self._slider.setShowTicks(False)
-            self._max_label.hide()
-            self._min_label.hide()
-
-        if self._orient == Qt.Horizontal:
-            self._vl.setContentsMargins(0, 3 if show_range else 0, 0, 0)
-            self._gl.setColumnMinimumWidth(0, self._name_width)
-            self._gl.setColumnMinimumWidth(4, self._value_width)
-        else:
-            self._vl.setContentsMargins(3 if show_range else 0, 0, 0, 0)
-            width = max(self._name_width, self._value_width)
-            slider_width = self._vl.sizeHint().width()
-
-            self._gl.setColumnMinimumWidth(0, max(10, (width - slider_width) // 2))
-            self._gl.setColumnMinimumWidth(1, slider_width)
-            self._gl.setColumnMinimumWidth(2, max(10, (width - slider_width) // 2))
-
-        self._gl.invalidate()
-        widget = self._gl.parentWidget()
-        if widget:
-            widget.updateGeometry()
-        self._right_click_overlay.sync_to_target()
 
     def _on_slider_values_changed(self, vals: Tuple[float, float]) -> None:
         """Handle lower/upper changes from the dual-handle slider.
@@ -1391,92 +1019,23 @@ class LabeledRangeSliderBase(ParameterWidgetBase[tuple], Generic[TNum]):
             self._current_lower = lo
             self._current_upper = hi
             self._update_value_label()
-            self.valueChanged.emit(self.get_value())
+            if not self._quiet:
+                self.valueChanged.emit(self.get_value())
 
-    def _set_right_click_item_checked(self, act_id, checked: bool) -> bool:
-        """Update the stored checked state of a context-menu item.
-
-        Args:
-            act_id: Menu item identifier.
-            checked: Checked state to store.
-
-        Returns:
-            ``True`` if the item was found, otherwise ``False``.
-        """
-        if not self._right_click_items:
-            return False
-
-        for item in self._right_click_items:
-            if item.get("id") == "sep":
-                continue
-            if item.get("id") == act_id:
-                item["checkable"] = bool(item.get("checkable", True))
-                item["checked"] = bool(checked)
-                return True
-
-        return False
-
-    def _set_right_click_item_enabled(self, act_id, enabled: bool) -> bool:
-        """Update the stored enabled state of a context-menu item.
-
-        Args:
-            act_id: Menu item identifier.
-            enabled: Enabled state to store.
-
-        Returns:
-            ``True`` if the item was found, otherwise ``False``.
-        """
-        if not self._right_click_items:
-            return False
-
-        for item in self._right_click_items:
-            if item.get("id") == "sep":
-                continue
-            if item.get("id") == act_id:
-                item["enabled"] = bool(enabled)
-                return True
-
-        return False
-
-    def _right_click_requested(self, item_id, checked: bool) -> None:
-        """Dispatch common context-menu actions.
-
-        Args:
-            item_id: Triggered menu item identifier.
-            checked: Checked state associated with the action.
-        """
-        if item_id == "save_as_default":
-            self.save_current_value_as_default_value()
-        elif item_id == "reset_to_default":
-            self._reset_to_default_value()
-
-    def save_current_value_as_default_value(self):
-        """Store the current lower and upper values as defaults."""
+    def save_current_value_as_default_value(self) -> None:
+        """Store the current lower and upper values as defaults (user action)."""
         self._default_lower = self._current_lower
         self._default_upper = self._current_upper
-        self.blockSignals(True)
-        try:
+        with self._quiet_updates():
             self._reset_to_default_value()
-        finally:
-            self.blockSignals(False)
+        self._update_marker()
         self.defaultChanged.emit((self._default_lower, self._default_upper))
 
     def _reset_to_default_value(self) -> None:
-        """Restore the default lower and upper values."""
+        """Move the handles to the default lower and upper values."""
         self._slider.setValues((float(self._default_lower), float(self._default_upper)))
 
-    def get_value_width(self) -> int:
-        """Return the cached width of the value display.
-
-        Returns:
-            Width in pixels.
-        """
-        self.blockSignals(True)
-        self._update_value_width()
-        self.blockSignals(False)
-        return self._value_width
-
-    def get_value(self) -> Tuple[TNum, TNum]:
+    def get_value(self) -> Any:
         """Return the current lower and upper values.
 
         Returns:
@@ -1484,177 +1043,15 @@ class LabeledRangeSliderBase(ParameterWidgetBase[tuple], Generic[TNum]):
         """
         return self._current_lower, self._current_upper
 
-    def set_format(self, val_fmt: str) -> None:
-        """Set the display format used for the range values.
-
-        Args:
-            val_fmt: New display format string.
-        """
-        self._value_fmt = val_fmt
-        self._update_eval_fmt()
-
-        self._current_lower = self.evaluate_value(self._current_lower)
-        self._current_upper = self.evaluate_value(self._current_upper)
-        self._default_lower = self.evaluate_value(self._default_lower)
-        self._default_upper = self.evaluate_value(self._default_upper)
-        self._min_value = self.evaluate_value(self._min_value)
-        self._max_value = self.evaluate_value(self._max_value)
-
-        self._use_sci_html = bool(re.search(r"\{:[0-9]*\.(\d+)S\}", val_fmt))
-        text_fmt = Qt.RichText if self._use_sci_html else Qt.PlainText
-        self._value_lo_label.setTextFormat(text_fmt)
-        self._value_hi_label.setTextFormat(text_fmt)
-        self._min_label.setTextFormat(text_fmt)
-        self._max_label.setTextFormat(text_fmt)
-
-    def set_border(self, state: SliderBorderState) -> None:
-        """Set the visual border state of the widget.
-
-        Args:
-            state: Border state enum value.
-        """
-        state = state.value
-        self.setProperty("borderState", state)
-        self.style().unpolish(self)
-        self.style().polish(self)
-        self.update()
-
-    def set_right_click_enabled(self, state: bool) -> None:
-        """Enable or disable the context menu.
-
-        Args:
-            state: Whether right-click actions should be enabled.
-        """
-        self._right_click_enable = state
-
-    def set_label(self, label: str) -> None:
-        """Set the displayed label text.
-
-        Args:
-            label: New label text.
-        """
-        self._name_label.set_text(label)
-        self._name_width = self._name_label.sizeHint().width()
-        self.nameWidthChanged.emit(self._name_width)
-
-    def _show_context_menu(self, global_pos) -> None:
-        """Build and show the context menu.
-
-        Args:
-            global_pos: Global screen position where the menu should open.
-        """
-        if not self._right_click_enable:
-            return
-        if not self._right_click_items:
-            return
-
-        self.set_border(SliderBorderState.NORMAL)
-        QApplication.processEvents()
-        try:
-            menu = QMenu()
-            item_by_id = {}
-
-            for item in self._right_click_items:
-                act_id = item.get("id")
-                if act_id == "sep":
-                    menu.addSeparator()
-                    continue
-
-                text = str(item.get("text", act_id if act_id is not None else "None"))
-                enabled = bool(item.get("enabled", True))
-                checkable = bool(item.get("checkable", False))
-                checked = bool(item.get("checked", False))
-
-                act = menu.addAction(text)
-                act.setEnabled(enabled)
-                act.setCheckable(checkable)
-                if checkable:
-                    act.setChecked(checked)
-                act.setData(act_id)
-                item_by_id[act_id] = item
-
-            action = menu.exec(global_pos)
-            if action is None:
-                return
-
-            act_id = action.data()
-            if act_id is None:
-                act_id = action.text()
-
-            new_checked = False
-            if action.isCheckable():
-                old_checked = bool(item_by_id.get(act_id, {}).get("checked", action.isChecked()))
-                new_checked = bool(action.isChecked())
-
-                if new_checked == old_checked:
-                    new_checked = not old_checked
-                    action.setChecked(new_checked)
-
-                if act_id in item_by_id:
-                    item_by_id[act_id]["checked"] = new_checked
-
-            self._right_click_requested(act_id, new_checked)
-        finally:
-            self.set_border(SliderBorderState.OFF)
-            QApplication.processEvents()
-
-    def contextMenuEvent(self, event) -> None:
-        """Handle the Qt context-menu callback.
-
-        Args:
-            event: Qt context-menu event.
-        """
-        self._show_context_menu(event.globalPos())
-
-    def resizeEvent(self, event):
-        """Synchronize overlay geometry after resizing.
-
-        Args:
-            event: Qt resize event.
-        """
-        super().resizeEvent(event)
-        self._right_click_overlay.sync_to_target()
-
-    def showEvent(self, event):
-        """Synchronize overlay geometry after showing the widget.
-
-        Args:
-            event: Qt show event.
-        """
-        super().showEvent(event)
-        self._right_click_overlay.sync_to_target()
-
-    def moveEvent(self, event):
-        """Synchronize overlay geometry after moving the widget.
-
-        Args:
-            event: Qt move event.
-        """
-        super().moveEvent(event)
-        self._right_click_overlay.sync_to_target()
-
-    def changeEvent(self, event):
-        """Handle enabled-state changes and refresh overlays.
-
-        Args:
-            event: Qt change event.
-        """
-        super().changeEvent(event)
-
-        if event.type() == QEvent.EnabledChange:
-            enabled = self.isEnabled()
-            self._slider.setEnabled(enabled)
-            self._right_click_overlay.sync_to_target()
-            self._default_red_marker.update()
-
-            if not enabled:
-                self.set_border(SliderBorderState.OFF)
-
-            self.update()
-
 
 class NumericRangeSliderBase(LabeledRangeSliderBase[TNum], Generic[TNum]):
-    """Base class for integer and float range sliders."""
+    """Base class for integer and float range sliders.
+
+    The slider works in one of two modes: *values* (the handles define the
+    range) or *margins* (lower/upper percentages are used instead and the
+    handles are disabled). The mode and margins are part of the value returned
+    by ``get_value``.
+    """
 
     def __init__(
         self,
@@ -1673,7 +1070,7 @@ class NumericRangeSliderBase(LabeledRangeSliderBase[TNum], Generic[TNum]):
         margins: Tuple[int, int],
         show_range: bool,
         orientation: Qt.Orientation,
-        editable: bool,
+        features: SliderFeature,
         parent: Optional[QWidget] = None,
     ):
         """Initialize the numeric range-slider base class.
@@ -1690,13 +1087,24 @@ class NumericRangeSliderBase(LabeledRangeSliderBase[TNum], Generic[TNum]):
             max_limit: Optional upper hard limit.
             min_limit_inclusive: Whether the lower hard limit is inclusive.
             max_limit_inclusive: Whether the upper hard limit is inclusive.
-            use_margins: Whether the slider is currently controlled by margins.
-            margins: Lower and upper margin values.
-            show_range: Whether range labels and ticks should be shown.
+            use_margins: Whether the slider starts in margins mode.
+            margins: Lower and upper margins in percent (0-100).
+            show_range: Initial visibility of range labels and ticks; change
+                later with ``set_show_range``.
             orientation: Slider orientation.
-            editable: Whether configuration editing is enabled.
+            features: Context-menu features offered by the slider.
             parent: Optional parent widget.
+
+        Raises:
+            ValueError: If the range violates the limits, ``init_vals`` is
+                outside the range or limits or its upper value is not greater
+                than its lower value, a margin is outside 0-100, or
+                ``use_margins`` is set without ``SliderFeature.MARGINS``.
+            TypeError: If ``init_vals`` contains non-numeric values.
         """
+        if use_margins and SliderFeature.MARGINS not in features:
+            raise ValueError("use_margins=True requires SliderFeature.MARGINS in features")
+
         super().__init__(
             label=label,
             unit=unit,
@@ -1706,6 +1114,7 @@ class NumericRangeSliderBase(LabeledRangeSliderBase[TNum], Generic[TNum]):
             orientation=orientation,
             val_fmt=val_fmt,
             show_range=show_range,
+            features=features,
             parent=parent,
         )
 
@@ -1714,52 +1123,76 @@ class NumericRangeSliderBase(LabeledRangeSliderBase[TNum], Generic[TNum]):
         self._max_limit = max_limit
         self._min_limit_inclusive = min_limit_inclusive
         self._max_limit_inclusive = max_limit_inclusive
-        self._editable = editable
-        self._use_margins = use_margins
-        self._margin_lower = margins[0]
-        self._margin_upper = margins[1]
-        self._add_right_click_items()
-        self._set_right_click_item_enabled("edit_config", editable)
+        self._use_margins = bool(use_margins)
+        self._margin_lower, self._margin_upper = self._validate_margins(margins)
 
+        self._validate_limit_one("min_val", self._min_value)
+        self._validate_limit_one("max_val", self._max_value)
+        lo, hi = self._validate_pair(self.get_current_value())
+        if not (self._min_value <= lo and hi <= self._max_value):
+            raise ValueError(
+                f"init_vals ({lo}, {hi}) must lie within [{self._min_value}, {self._max_value}]"
+            )
+
+        self._add_right_click_items()
         self._slider.valueChanged.connect(self._on_slider_values_changed)
 
         self._apply_mode()
-        self._update_value_width()
-        self._update_layout()
         self._update_all_labels()
+        self._update_value_width()
 
+    # ----- validation -----
     def _validate_limit_one(self, name: str, value: TNum) -> None:
-        """Validate that one value lies within hard limits.
+        """Validate that one value lies within the hard limits.
 
         Args:
             name: Name of the value being validated.
             value: Value to validate.
+
+        Raises:
+            ValueError: If the value violates a limit.
         """
         if self._min_limit is not None:
-            if self._min_limit_inclusive:
-                ok = value >= self._min_limit
-            else:
-                ok = value > self._min_limit
+            ok = value >= self._min_limit if self._min_limit_inclusive else value > self._min_limit
             if not ok:
                 raise ValueError(f"{name} must be within the allowed limits.")
 
         if self._max_limit is not None:
-            if self._max_limit_inclusive:
-                ok = value <= self._max_limit
-            else:
-                ok = value < self._max_limit
+            ok = value <= self._max_limit if self._max_limit_inclusive else value < self._max_limit
             if not ok:
                 raise ValueError(f"{name} must be within the allowed limits.")
 
+    def _check_number(self, name: str, value: Any) -> None:
+        """Check that a value has an acceptable numeric type.
+
+        Args:
+            name: Name of the value being checked.
+            value: Value to check.
+
+        Raises:
+            TypeError: If the value is not a real number (or not an integer on
+                integer sliders). ``bool`` is rejected.
+        """
+        if isinstance(value, bool) or not isinstance(value, numbers.Real):
+            raise TypeError(f"{name} must be a number, not {type(value).__name__}")
+        if self.value_is_int and not isinstance(value, numbers.Integral):
+            raise TypeError(f"{name} must be an integer, not {type(value).__name__}")
+
     def _validate_pair(self, values: Tuple[Any, Any]) -> Tuple[TNum, TNum]:
-        """Validate a lower/upper pair.
+        """Validate and normalize a lower/upper pair.
 
         Args:
             values: Pair of proposed lower and upper values.
 
         Returns:
             Normalized lower and upper values.
+
+        Raises:
+            TypeError: If a value is not numeric.
+            ValueError: If a value violates the limits or upper <= lower.
         """
+        self._check_number("lower", values[0])
+        self._check_number("upper", values[1])
         lo = self.evaluate_value(values[0])
         hi = self.evaluate_value(values[1])
 
@@ -1768,16 +1201,114 @@ class NumericRangeSliderBase(LabeledRangeSliderBase[TNum], Generic[TNum]):
 
         if hi <= lo:
             raise ValueError("upper must be greater than lower")
-
         return lo, hi
 
-    def _clamp_pair_to_range(
-        self,
-        values: Tuple[TNum, TNum],
-        new_min: TNum,
-        new_max: TNum,
-    ) -> Tuple[TNum, TNum]:
+    @staticmethod
+    def _validate_margins(margins: Tuple[Any, Any]) -> Tuple[int, int]:
+        """Validate a lower/upper margin pair.
+
+        Args:
+            margins: Lower and upper margins in percent.
+
+        Returns:
+            Margins as integers.
+
+        Raises:
+            ValueError: If a margin is outside 0-100.
+        """
+        m_lo, m_up = int(margins[0]), int(margins[1])
+        if not (0 <= m_lo <= 100 and 0 <= m_up <= 100):
+            raise ValueError("margins must be within 0-100")
+        return m_lo, m_up
+
+    def _check_new_pair(self, lower: TNum, upper: TNum) -> str | None:
+        """Check a proposed lower/upper pair (for the Set Values dialog).
+
+        Args:
+            lower: Proposed lower value.
+            upper: Proposed upper value.
+
+        Returns:
+            Error message, or ``None`` if the pair is valid.
+        """
+        try:
+            self._validate_pair((lower, upper))
+        except (TypeError, ValueError) as e:
+            return str(e)
+        return None
+
+    def _check_new_config(self, new_min: TNum, new_max: TNum, new_fmt: str) -> str | None:
+        """Check a proposed range and format before applying them.
+
+        Args:
+            new_min: Proposed minimum value.
+            new_max: Proposed maximum value.
+            new_fmt: Proposed display format string.
+
+        Returns:
+            Error message, or ``None`` if the configuration is valid.
+        """
+        eval_fmt = get_numeric_format_field(new_fmt)
+        mn = self.evaluate_value(new_min, eval_fmt)
+        mx = self.evaluate_value(new_max, eval_fmt)
+        if not format_is_valid(new_fmt, mn):
+            return f"Invalid format: {new_fmt!r}"
+        if mn >= mx:
+            return f"Min must be less than max (with this format: {mn} and {mx})."
+        try:
+            self._validate_limit_one("Min", mn)
+            self._validate_limit_one("Max", mx)
+        except ValueError as e:
+            return str(e)
+        return None
+
+    def _validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
+        """Merge and check a configuration mapping before applying it.
+
+        Args:
+            config: Partial or complete configuration mapping.
+
+        Returns:
+            Complete, validated configuration mapping.
+
+        Raises:
+            ValueError: If the range or format is invalid.
+        """
+        config = super()._validate_config(config)
+        msg = self._check_new_config(config["min_val"], config["max_val"], config["val_fmt"])
+        if msg:
+            raise ValueError(msg)
+        return config
+
+    def _validate_value(self, value: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate and complete a value mapping.
+
+        Args:
+            value: Mapping with optional ``use_margins``, ``range`` and
+                ``margins`` entries; missing entries keep their current values.
+
+        Returns:
+            Complete, normalized mapping.
+
+        Raises:
+            TypeError: If ``value`` is not a mapping or the range is not numeric.
+            ValueError: If the range, margins or mode are invalid.
+        """
+        if not isinstance(value, dict):
+            raise TypeError(f"value must be a dict, not {type(value).__name__}")
+        use_margins = bool(value.get("use_margins", self._use_margins))
+        if use_margins and SliderFeature.MARGINS not in self._features:
+            raise ValueError("use_margins=True requires SliderFeature.MARGINS")
+        margins = self._validate_margins(value.get("margins", (self._margin_lower, self._margin_upper)))
+        pair = self._validate_pair(value.get("range", self.get_current_value()))
+        return {"use_margins": use_margins, "range": pair, "margins": margins}
+
+    @staticmethod
+    def _clamp_pair_to_range(values: Tuple[TNum, TNum], new_min: TNum, new_max: TNum) -> Tuple[TNum, TNum]:
         """Clamp a lower/upper pair to a new numeric range.
+
+        Each value is clamped into ``[new_min, new_max]``. If that leaves no
+        valid pair (upper not greater than lower), the full range is used.
 
         Args:
             values: Pair of lower and upper values.
@@ -1785,38 +1316,36 @@ class NumericRangeSliderBase(LabeledRangeSliderBase[TNum], Generic[TNum]):
             new_max: New maximum range value.
 
         Returns:
-            Clamped lower and upper values.
+            Clamped lower and upper values, with lower < upper.
         """
         lo, hi = values
-
-        lo = max(lo, new_min)
-        hi = min(hi, new_max)
-
-        if lo > new_max:
-            lo = new_min
-
-        if hi < new_min:
-            hi = new_max
-
+        lo = min(max(lo, new_min), new_max)
+        hi = min(max(hi, new_min), new_max)
+        if hi <= lo:
+            return new_min, new_max
         return lo, hi
 
-    def _add_right_click_items(self):
-        """Append range-slider-specific context-menu items."""
-        self._right_click_items.extend(
-            [
-                {"id": "sep"},
-                {"id": "use_values", "text": "Use Values", "checkable": True, "checked": not self._use_margins},
-                {"id": "set_values", "text": "Set Values..."},
-                {"id": "sep"},
-                {"id": "use_margins", "text": "Use Margins", "checkable": True, "checked": self._use_margins},
+    # ----- context menu -----
+    def _add_right_click_items(self) -> None:
+        """Append range-slider context-menu items allowed by ``features``."""
+        f = self._features
+        items: List[Dict[str, Any]] = [{"id": "sep"}]
+        if SliderFeature.MARGINS in f:
+            items.append({"id": "use_values", "text": "Use Values", "checkable": True, "checked": False})
+        if SliderFeature.SET_VALUE in f:
+            items.append({"id": "set_values", "text": "Set Values..."})
+        items.append({"id": "sep"})
+        if SliderFeature.MARGINS in f:
+            items += [
+                {"id": "use_margins", "text": "Use Margins", "checkable": True, "checked": False},
                 {"id": "set_margins", "text": "Set Margins..."},
-                {"id": "sep"},
-                {"id": "edit_config", "text": "Edit Configuration...", "enabled": True},
             ]
-        )
+        if SliderFeature.CONFIG in f:
+            items += [{"id": "sep"}, {"id": "edit_config", "text": "Edit Configuration..."}]
+        self._right_click_items.extend(items)
 
     def _right_click_requested(self, item_id, checked: bool) -> None:
-        """Dispatch range-slider-specific context-menu actions.
+        """Dispatch range-slider context-menu actions (user actions).
 
         Args:
             item_id: Triggered menu item identifier.
@@ -1827,139 +1356,19 @@ class NumericRangeSliderBase(LabeledRangeSliderBase[TNum], Generic[TNum]):
             self._open_edit_config_dlg()
         elif item_id == "set_values":
             self._open_set_values_dlg()
-        elif item_id == "use_values":
-            if checked:
-                self._use_margins = False
-                self._apply_mode()
-            else:
-                self._set_right_click_item_checked("use_values", True)
-        elif item_id == "use_margins":
-            if checked:
-                self._use_margins = True
-                self._apply_mode()
-            else:
-                self._set_right_click_item_checked("use_margins", True)
         elif item_id == "set_margins":
-            self._open_set_margins_dialog()
+            self._open_set_margins_dlg()
+        elif item_id in ("use_values", "use_margins"):
+            # Clicking the active mode unchecks it (checked=False): just restore the marks.
+            if checked:
+                self._use_margins = item_id == "use_margins"
+                self._apply_mode()
+                self.valueChanged.emit(self.get_value())
+            else:
+                self._apply_mode()
 
-    def _open_edit_config_dlg(self) -> None:
-        """Open the configuration dialog and apply accepted changes."""
-        dlg = EditConfigDialog[TNum](
-            range_slider_name=self._label_text,
-            value_is_int=self.value_is_int,
-            min_val=self._min_value,
-            max_val=self._max_value,
-            fmt=self._value_fmt,
-            show_range=self._show_range,
-            min_limit=self._min_limit,
-            max_limit=self._max_limit,
-            min_limit_inclusive=self._min_limit_inclusive,
-            max_limit_inclusive=self._max_limit_inclusive,
-        )
-        if dlg.exec() != QDialog.Accepted:
-            return
-
-        new_min, new_max, new_fmt, new_show_range = dlg.get_values()
-
-        old_min = self._min_value
-        old_max = self._max_value
-        old_fmt = self._value_fmt
-        old_show_range = self._show_range
-
-        new_min = self.evaluate_value(new_min)
-        new_max = self.evaluate_value(new_max)
-
-        self.set_format(new_fmt)
-
-        new_cur = self._clamp_pair_to_range((self._current_lower, self._current_upper), new_min, new_max)
-        new_dft = self._clamp_pair_to_range((self._default_lower, self._default_upper), new_min, new_max)
-
-        needs_clamp = (
-            new_cur != (self._current_lower, self._current_upper)
-            or new_dft != (self._default_lower, self._default_upper)
-        )
-
-        if needs_clamp:
-            self.set_border(SliderBorderState.ERROR)
-            try:
-                result = range_slider_ask_clamp_value(
-                    proposed_range=self._range_to_text((new_min, new_max)),
-                    old_cur=self._range_to_text((self._current_lower, self._current_upper)),
-                    old_dft=self._range_to_text((self._default_lower, self._default_upper)),
-                    new_cur=self._range_to_text(new_cur),
-                    new_dft=self._range_to_text(new_dft),
-                    parent=self,
-                )
-            finally:
-                self.set_border(SliderBorderState.OFF)
-
-            if result != AskResult.YES:
-                self.set_format(old_fmt)
-                return
-
-        self._show_range = new_show_range
-        self.set_range(new_min, new_max)
-        self._update_layout()
-
-        if (
-            old_min != self._min_value
-            or old_max != self._max_value
-            or old_fmt != self._value_fmt
-            or old_show_range != self._show_range
-        ):
-            self.configChanged.emit(self.get_config())
-
-    def _open_set_values_dlg(self) -> None:
-        """Open the value-pair dialog and apply accepted changes."""
-        dlg = SetValuesDialog[TNum](
-            slider_name=self._label_text,
-            value_is_int=self.value_is_int,
-            current_lower=self._current_lower,
-            current_upper=self._current_upper,
-            fmt=self._value_fmt,
-            min_limit=self._min_limit,
-            max_limit=self._max_limit,
-            min_limit_inclusive=self._min_limit_inclusive,
-            max_limit_inclusive=self._max_limit_inclusive,
-        )
-        if dlg.exec() != QDialog.Accepted:
-            return
-
-        new_pair = self._validate_pair(dlg.get_values())
-        old_pair = self.get_value()
-        old_default = self.get_default_value()
-
-        needs_range_change = not (
-            self._min_value <= new_pair[0] <= self._max_value
-            and self._min_value <= new_pair[1] <= self._max_value
-        )
-
-        if needs_range_change:
-            new_min = min(self._min_value, new_pair[0])
-            new_max = max(self._max_value, new_pair[1])
-
-            self.set_border(SliderBorderState.ERROR)
-            try:
-                result = range_slider_ask_extend_range(
-                    proposed_vals=self._range_to_text(new_pair),
-                    old_range=self._range_to_text((self._max_value, self._max_value)),
-                    new_range=self._range_to_text((new_min, new_max)),
-                    parent=self,
-                )
-            finally:
-                self.set_border(SliderBorderState.OFF)
-            if result != AskResult.YES:
-                return
-
-        self.set_value({"range": new_pair})
-
-        if old_pair != self.get_value():
-            self.valueChanged.emit(self.get_value())
-        if old_default != self.get_default_value():
-            self.defaultChanged.emit(self.get_default_value())
-
-    def _apply_mode(self):
-        """Apply the current values-vs-margins operating mode."""
+    def _apply_mode(self) -> None:
+        """Apply the current values/margins mode to the menu and widgets (no signals)."""
         use_margins = self._use_margins
         self._set_right_click_item_checked("use_margins", use_margins)
         self._set_right_click_item_checked("use_values", not use_margins)
@@ -1969,67 +1378,172 @@ class NumericRangeSliderBase(LabeledRangeSliderBase[TNum], Generic[TNum]):
         self._set_right_click_item_enabled("save_as_default", not use_margins)
         self._set_right_click_item_enabled("reset_to_default", not use_margins)
 
-        widgets = [
-            self._slider,
-            self._min_label,
-            self._max_label,
-            self._value_wrap,
-        ]
-
-        for w in widgets:
+        for w in (self._slider, self._min_label, self._max_label, self._value_wrap):
             w.setEnabled(not use_margins)
 
-        if hasattr(self, "_right_click_overlay"):
-            self._right_click_overlay.sync_to_target()
+        self._sync_overlay()
 
-        self.valueChanged.emit(self.get_value())
+    # ----- dialogs (user actions) -----
+    def _open_edit_config_dlg(self) -> None:
+        """Open the configuration dialog and apply accepted changes.
 
-    def _open_set_margins_dialog(self) -> None:
+        If the new range would exclude the current or default pair, the user
+        is asked whether to clamp them. Cancelling restores the previous format
+        and values.
+        """
+        dlg = EditConfigDialog[TNum](
+            slider_name=self._label_text,
+            value_is_int=self.value_is_int,
+            min_val=self._min_value,
+            max_val=self._max_value,
+            val_fmt=self._val_fmt,
+            min_limit=self._min_limit,
+            max_limit=self._max_limit,
+            min_limit_inclusive=self._min_limit_inclusive,
+            max_limit_inclusive=self._max_limit_inclusive,
+            validate=self._check_new_config,
+        )
+        if dlg.exec() != QDialog.Accepted:
+            return
+        new_min, new_max, new_fmt = dlg.get_values()
+
+        # snapshot before set_format rounds anything
+        old_fmt = self._val_fmt
+        old_min, old_max = self._min_value, self._max_value
+        saved_cur = self.get_current_value()
+        saved_dft = self.get_default_value()
+        old_value = self.get_value()
+
+        self.set_format(new_fmt)
+        new_min = self.evaluate_value(new_min)
+        new_max = self.evaluate_value(new_max)
+
+        cur = self.get_current_value()
+        dft = self.get_default_value()
+        new_cur = self._clamp_pair_to_range(cur, new_min, new_max)
+        new_dft = self._clamp_pair_to_range(dft, new_min, new_max)
+
+        if new_cur != cur or new_dft != dft:
+            self.set_border(SliderBorderState.ERROR)
+            try:
+                result = range_slider_ask_clamp_value(
+                    proposed_range=self._range_to_text((new_min, new_max)),
+                    old_cur=self._range_to_text(cur),
+                    old_dft=self._range_to_text(dft),
+                    new_cur=self._range_to_text(new_cur),
+                    new_dft=self._range_to_text(new_dft),
+                    parent=self,
+                )
+            finally:
+                self.set_border(SliderBorderState.OFF)
+            if result != AskResult.YES:
+                self.set_format(old_fmt)
+                self._current_lower, self._current_upper = saved_cur
+                self._default_lower, self._default_upper = saved_dft
+                self._min_value, self._max_value = old_min, old_max
+                return
+
+        self.set_range(new_min, new_max)
+
+        if self.get_value() != old_value:
+            self.valueChanged.emit(self.get_value())
+        if self.get_default_value() != saved_dft:
+            self.defaultChanged.emit(self.get_default_value())
+        if (old_min, old_max, old_fmt) != (self._min_value, self._max_value, self._val_fmt):
+            self.configChanged.emit(self.get_config())
+
+    def _open_set_values_dlg(self) -> None:
+        """Open the value-pair dialog and apply the accepted pair.
+
+        Only the current pair changes; the default stays as it is.
+        """
+        dlg = SetValuesDialog[TNum](
+            slider_name=self._label_text,
+            value_is_int=self.value_is_int,
+            current_lower=self._current_lower,
+            current_upper=self._current_upper,
+            fmt=self._val_fmt,
+            min_limit=self._min_limit,
+            max_limit=self._max_limit,
+            min_limit_inclusive=self._min_limit_inclusive,
+            max_limit_inclusive=self._max_limit_inclusive,
+            validate=self._check_new_pair,
+            parent=self,
+        )
+        if dlg.exec() != QDialog.Accepted:
+            return
+
+        new_pair = self._validate_pair(dlg.get_values())
+        old_value = self.get_value()
+        old_range = (self._min_value, self._max_value)
+
+        if not (self._min_value <= new_pair[0] and new_pair[1] <= self._max_value):
+            new_min = min(self._min_value, new_pair[0])
+            new_max = max(self._max_value, new_pair[1])
+            self.set_border(SliderBorderState.ERROR)
+            try:
+                result = range_slider_ask_extend_range(
+                    proposed_vals=self._range_to_text(new_pair),
+                    old_range=self._range_to_text(old_range),
+                    new_range=self._range_to_text((new_min, new_max)),
+                    parent=self,
+                )
+            finally:
+                self.set_border(SliderBorderState.OFF)
+            if result != AskResult.YES:
+                return
+
+        self.set_value({"range": new_pair}, keep_default_value=True)
+
+        if self.get_value() != old_value:
+            self.valueChanged.emit(self.get_value())
+        if (self._min_value, self._max_value) != old_range:
+            self.configChanged.emit(self.get_config())
+
+    def _open_set_margins_dlg(self) -> None:
         """Open the margins dialog and apply accepted changes."""
         dlg = SetMarginsDialog(
             slider_name=self._label_text,
             margin_lower=self._margin_lower,
             margin_upper=self._margin_upper,
+            parent=self,
         )
         if dlg.exec() != QDialog.Accepted:
             return
 
-        new_margin_lo, new_margin_up = dlg.get_values()
-
-        if not (new_margin_lo == self._margin_lower and new_margin_up == self._margin_upper):
-            self._margin_lower = new_margin_lo
-            self._margin_upper = new_margin_up
+        new_margins = dlg.get_values()
+        if new_margins != (self._margin_lower, self._margin_upper):
+            self._margin_lower, self._margin_upper = new_margins
             self.valueChanged.emit(self.get_value())
 
+    # ----- config -----
     def get_config(self) -> dict:
         """Return the current configuration mapping.
 
         Returns:
-            Configuration dictionary containing numeric bounds, display format,
-            and range-visibility state.
+            Mapping containing the current range and format.
         """
         return {
             "min_val": self._min_value,
             "max_val": self._max_value,
-            "val_fmt": self._value_fmt,
-            "show_range": self._show_range,
+            "val_fmt": self._val_fmt,
         }
 
     def _apply_config(self, config: dict) -> None:
-        """Apply a validated configuration mapping.
+        """Apply a validated configuration mapping (no signals).
 
         Args:
             config: Configuration mapping to apply.
         """
-        self._show_range = config["show_range"]
         self.set_format(config["val_fmt"])
         self.set_range(config["min_val"], config["max_val"])
 
+    # ----- value API (programmatic, no signals) -----
     def get_value(self) -> Dict[str, Any]:
-        """Return the current values-and-margins state.
+        """Return the current mode, range and margins.
 
         Returns:
-            Mapping containing the active mode, finite range values, and margins.
+            Mapping with ``use_margins``, ``range`` and ``margins``.
         """
         return {
             "use_margins": self._use_margins,
@@ -2038,7 +1552,7 @@ class NumericRangeSliderBase(LabeledRangeSliderBase[TNum], Generic[TNum]):
         }
 
     def get_current_value(self) -> Tuple[TNum, TNum]:
-        """Return the current finite lower and upper values."""
+        """Return the current lower and upper values."""
         return self._current_lower, self._current_upper
 
     def get_default_value(self) -> Tuple[TNum, TNum]:
@@ -2054,140 +1568,108 @@ class NumericRangeSliderBase(LabeledRangeSliderBase[TNum], Generic[TNum]):
         return self._max_value
 
     def set_value(self, value: Dict[str, Any], keep_default_value: bool = False) -> None:
-        """Set the current state of the range slider.
+        """Set the mode, range and/or margins (no signals).
+
+        Missing entries keep their current values. Everything is validated
+        before anything changes. The visible range is extended if needed.
 
         Args:
-            value: Mapping containing ``use_margins``, ``range``, and
-                optionally ``margins``.
-            keep_default_value: Whether to preserve the stored default range.
+            value: Mapping with optional ``use_margins``, ``range`` and
+                ``margins`` entries.
+            keep_default_value: Whether to keep the stored default range.
+
+        Raises:
+            TypeError: If ``value`` is not a mapping or the range is not numeric.
+            ValueError: If the range, margins or mode are invalid.
         """
-        self._use_margins = value.get("use_margins", self._use_margins)
-        self._set_right_click_item_checked("use_margins", self._use_margins)
-        self._set_right_click_item_checked("use_values", not self._use_margins)
-        range_values = value.get("range", (self._current_lower, self._current_upper))
-        self._margin_lower, self._margin_upper = value.get(
-            "margins",
-            (self._margin_lower, self._margin_upper),
-        )
-        lo, hi = self._validate_pair(range_values)
-        self._current_lower = lo
-        self._current_upper = hi
+        self._apply_value(self._validate_value(value), keep_default_value)
+
+    def _apply_value(self, value: Dict[str, Any], keep_default_value: bool = False) -> None:
+        """Apply a validated value mapping.
+
+        Args:
+            value: Mapping returned by ``_validate_value``.
+            keep_default_value: Whether to keep the stored default range.
+        """
+        lo, hi = value["range"]
+        self._use_margins = value["use_margins"]
+        self._margin_lower, self._margin_upper = value["margins"]
+        self._current_lower, self._current_upper = lo, hi
         if not keep_default_value:
-            self._default_lower = lo
-            self._default_upper = hi
+            self._default_lower, self._default_upper = lo, hi
 
-        cfg_changed = False
-        if lo < self._min_value:
-            self._min_value = lo
-            cfg_changed = True
-        if hi > self._max_value:
-            self._max_value = hi
-            cfg_changed = True
+        self._min_value = min(self._min_value, lo)
+        self._max_value = max(self._max_value, hi)
 
-        self._slider.blockSignals(True)
-        try:
+        with self._quiet_updates():
             self._slider.setRange(float(self._min_value), float(self._max_value))
             self._slider.setValues((float(lo), float(hi)))
-        finally:
-            self._slider.blockSignals(False)
 
+        self._update_marker()
         self._update_all_labels()
         self._update_value_width()
         self._apply_mode()
 
-        if cfg_changed:
-            self.configChanged.emit(self.get_config())
-
     def set_default_value(self, value: Tuple[TNum, TNum]) -> None:
-        """Set the stored default lower and upper values.
+        """Set the stored default lower and upper values (no signals).
+
+        The visible range is extended if needed.
 
         Args:
             value: New default lower and upper values.
+
+        Raises:
+            TypeError: If a value is not numeric.
+            ValueError: If the pair violates the limits or upper <= lower.
         """
         lo, hi = self._validate_pair(value)
-        self._default_lower = lo
-        self._default_upper = hi
+        self._default_lower, self._default_upper = lo, hi
+        self._min_value = min(self._min_value, lo)
+        self._max_value = max(self._max_value, hi)
 
-        cfg_changed = False
-        if lo < self._min_value:
-            self._min_value = lo
-            cfg_changed = True
-        if hi > self._max_value:
-            self._max_value = hi
-            cfg_changed = True
-
-        self._slider.blockSignals(True)
-        try:
+        with self._quiet_updates():
             self._slider.setRange(float(self._min_value), float(self._max_value))
             self._slider.setValues((float(self._current_lower), float(self._current_upper)))
-        finally:
-            self._slider.blockSignals(False)
 
+        self._update_marker()
         self._update_all_labels()
         self._update_value_width()
 
-        if cfg_changed:
-            self.configChanged.emit(self.get_config())
-
     def set_range(self, min_val: TNum, max_val: TNum) -> None:
-        """Set the finite numeric range.
+        """Set the numeric range and clamp current/default pairs (no signals).
 
         Args:
             min_val: New minimum value.
             max_val: New maximum value.
+
+        Raises:
+            ValueError: If a bound violates the limits or ``max_val <= min_val``.
         """
         min_val = self.evaluate_value(min_val)
         max_val = self.evaluate_value(max_val)
-
         self._validate_limit_one("min", min_val)
         self._validate_limit_one("max", max_val)
-
-        if max_val < min_val:
+        if max_val <= min_val:
             raise ValueError("max_val must be greater than min_val")
 
-        self._min_value = min_val
-        self._max_value = max_val
-
-        new_cur_lo, new_cur_up = self._clamp_pair_to_range(
-            (self._current_lower, self._current_upper),
-            min_val,
-            max_val,
+        self._min_value, self._max_value = min_val, max_val
+        self._current_lower, self._current_upper = self._clamp_pair_to_range(
+            self.get_current_value(), min_val, max_val
         )
-        cur_clamped = False
-        if new_cur_lo != self._current_lower or new_cur_up != self._current_upper:
-            self._current_lower = new_cur_lo
-            self._current_upper = new_cur_up
-            cur_clamped = True
-
-        new_dft_lo, new_dft_up = self._clamp_pair_to_range(
-            (self._default_lower, self._default_upper),
-            min_val,
-            max_val,
+        self._default_lower, self._default_upper = self._clamp_pair_to_range(
+            self.get_default_value(), min_val, max_val
         )
-        dft_clamped = False
-        if new_dft_lo != self._default_lower or new_dft_up != self._default_upper:
-            self._default_lower = new_dft_lo
-            self._default_upper = new_dft_up
-            dft_clamped = True
 
-        self._slider.blockSignals(True)
-        try:
+        with self._quiet_updates():
             self._slider.setRange(float(min_val), float(max_val))
             self._slider.setValues((float(self._current_lower), float(self._current_upper)))
-        finally:
-            self._slider.blockSignals(False)
 
+        self._update_marker()
         self._update_all_labels()
         self._update_value_width()
 
-        if cur_clamped:
-            self.valueChanged.emit(self.get_value())
-
-        if dft_clamped:
-            self.defaultChanged.emit(self.get_default_value())
-
     def set_min_value(self, min_val: TNum) -> None:
-        """Set only the minimum bound.
+        """Set only the minimum bound (no signals).
 
         Args:
             min_val: New minimum value.
@@ -2195,7 +1677,7 @@ class NumericRangeSliderBase(LabeledRangeSliderBase[TNum], Generic[TNum]):
         self.set_range(min_val, self._max_value)
 
     def set_max_value(self, max_val: TNum) -> None:
-        """Set only the maximum bound.
+        """Set only the maximum bound (no signals).
 
         Args:
             max_val: New maximum value.
@@ -2222,7 +1704,7 @@ class IntRangeSlider(NumericRangeSliderBase[int]):
         margins: Tuple[int, int] = (10, 10),
         show_range: bool = True,
         orientation: Qt.Orientation = Qt.Horizontal,
-        editable: bool = True,
+        features: SliderFeature = SliderFeature.ALL,
         parent: Optional[QWidget] = None,
     ):
         """Initialize the integer range slider.
@@ -2239,10 +1721,12 @@ class IntRangeSlider(NumericRangeSliderBase[int]):
             min_limit_inclusive: Whether the lower hard limit is inclusive.
             max_limit_inclusive: Whether the upper hard limit is inclusive.
             use_margins: Whether the slider starts in margins mode.
-            margins: Initial lower and upper margins.
-            show_range: Whether range labels and ticks should be shown.
+            margins: Initial lower and upper margins in percent.
+            show_range: Initial visibility of range labels and ticks; change
+                later with ``set_show_range``.
             orientation: Slider orientation.
-            editable: Whether configuration editing is enabled.
+            features: Context-menu features offered by the slider. Defaults
+                to ``SliderFeature.ALL``; ``SPECIAL`` and ``VALUES`` are ignored.
             parent: Optional parent widget.
         """
         super().__init__(
@@ -2261,21 +1745,23 @@ class IntRangeSlider(NumericRangeSliderBase[int]):
             margins=margins,
             show_range=show_range,
             orientation=orientation,
-            editable=editable,
+            features=features,
             parent=parent,
         )
 
-    def evaluate_value(self, value: int) -> int:
+    def evaluate_value(self, value: int, eval_fmt: str | None = None) -> int:
         """Normalize an integer value using the evaluation format.
 
         Args:
             value: Integer value to normalize.
+            eval_fmt: Format to use instead of the current one.
 
         Returns:
             Normalized integer value.
         """
+        fmt = self._eval_fmt if eval_fmt is None else eval_fmt
         try:
-            return int(self._eval_fmt.format(value))
+            return int(fmt.format(value))
         except Exception:
             return int(value)
 
@@ -2299,7 +1785,7 @@ class FloatRangeSlider(NumericRangeSliderBase[float]):
         margins: Tuple[int, int] = (10, 10),
         show_range: bool = True,
         orientation: Qt.Orientation = Qt.Horizontal,
-        editable: bool = True,
+        features: SliderFeature = SliderFeature.ALL,
         parent: Optional[QWidget] = None,
     ):
         """Initialize the floating-point range slider.
@@ -2316,10 +1802,12 @@ class FloatRangeSlider(NumericRangeSliderBase[float]):
             min_limit_inclusive: Whether the lower hard limit is inclusive.
             max_limit_inclusive: Whether the upper hard limit is inclusive.
             use_margins: Whether the slider starts in margins mode.
-            margins: Initial lower and upper margins.
-            show_range: Whether range labels and ticks should be shown.
+            margins: Initial lower and upper margins in percent.
+            show_range: Initial visibility of range labels and ticks; change
+                later with ``set_show_range``.
             orientation: Slider orientation.
-            editable: Whether configuration editing is enabled.
+            features: Context-menu features offered by the slider. Defaults
+                to ``SliderFeature.ALL``; ``SPECIAL`` and ``VALUES`` are ignored.
             parent: Optional parent widget.
         """
         super().__init__(
@@ -2338,21 +1826,23 @@ class FloatRangeSlider(NumericRangeSliderBase[float]):
             margins=margins,
             show_range=show_range,
             orientation=orientation,
-            editable=editable,
+            features=features,
             parent=parent,
         )
 
-    def evaluate_value(self, value: float) -> float:
+    def evaluate_value(self, value: float, eval_fmt: str | None = None) -> float:
         """Normalize a float value using the evaluation format.
 
         Args:
             value: Float value to normalize.
+            eval_fmt: Format to use instead of the current one.
 
         Returns:
             Normalized float value.
         """
+        fmt = self._eval_fmt if eval_fmt is None else eval_fmt
         try:
-            return float(self._eval_fmt.format(float(value)))
+            return float(fmt.format(float(value)))
         except Exception:
             return float(value)
 
@@ -2365,7 +1855,6 @@ def _demo_main() -> int:
     """
     import sys
 
-    from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QMainWindow
 
     from settings.app_style import set_app_style
@@ -2374,7 +1863,7 @@ def _demo_main() -> int:
     set_app_style(app)
 
     win = QMainWindow()
-    win.setWindowTitle("DualHandleSlider test")
+    win.setWindowTitle("Range slider demo")
 
     central = QWidget()
     outer_layout = QVBoxLayout(central)
@@ -2385,42 +1874,31 @@ def _demo_main() -> int:
     r1 = IntRangeSlider("n", 0, 100, init_vals=(20, 80))
     r2 = FloatRangeSlider("k", 5.0e4, 6.0e4, val_fmt="{:.8S}")
     r3 = FloatSlider("A_C", 0.0, 100.0)
-    r4 = FloatRangeSlider(
-        "B_D",
-        0.0,
-        100.0,
-        init_vals=(30, 60),
-        val_fmt="{:.1f}",
-        orientation=Qt.Vertical,
-    )
+    r4 = FloatRangeSlider("B_D", 0.0, 100.0, init_vals=(30, 60), val_fmt="{:.1f}", orientation=Qt.Vertical)
     r5 = FloatSlider("C_E", 0.0, 100.0, orientation=Qt.Vertical)
+    sliders = (r1, r2, r3, r4, r5)
 
-    def on_check(checked: bool):
-        """Enable or disable all demo sliders.
+    for name, s in zip(("r1", "r2", "r3", "r4", "r5"), sliders):
+        s.valueChanged.connect(lambda v, n=name: print(f"{n} value: {v}"))
+        s.defaultChanged.connect(lambda v, n=name: print(f"{n} default: {v}"))
+        s.configChanged.connect(lambda c, n=name: print(f"{n} config: {c}"))
 
-        Args:
-            checked: Checkbox state from Qt.
-        """
-        checked = enable_cb.isChecked()
-        r1.setEnabled(checked)
-        r2.setEnabled(checked)
-        r3.setEnabled(checked)
-        r4.setEnabled(checked)
-        r5.setEnabled(checked)
+    def on_check(_state) -> None:
+        """Enable or disable all demo sliders."""
+        for s in sliders:
+            s.setEnabled(enable_cb.isChecked())
 
     enable_cb.stateChanged.connect(on_check)
 
-    sliders_layout = QHBoxLayout()
-
     left_layout = QVBoxLayout()
-    left_layout.addWidget(r1)
-    left_layout.addWidget(r2)
-    left_layout.addWidget(r3)
+    for s in (r1, r2, r3):
+        left_layout.addWidget(s)
 
     right_layout = QHBoxLayout()
     right_layout.addWidget(r4)
     right_layout.addWidget(r5)
 
+    sliders_layout = QHBoxLayout()
     sliders_layout.addLayout(left_layout, 1)
     sliders_layout.addLayout(right_layout)
 
@@ -2430,7 +1908,6 @@ def _demo_main() -> int:
     win.setCentralWidget(central)
     win.resize(600, 300)
     win.show()
-
     return app.exec()
 
 

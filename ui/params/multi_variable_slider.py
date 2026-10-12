@@ -21,7 +21,8 @@ from PySide6.QtWidgets import (
 )
 
 from dialogs.dialogs import AskResult, multi_slider_ask_clamp_value
-from ui.params.sliders import EditConfigDialog, FloatSlider, SpecialValue, normalize_special_value
+from settings.app_style import SliderBorderState
+from ui.params.sliders import EditConfigDialog, FloatSlider, SliderFeature, SpecialValue, normalize_special_value
 
 
 class MultiVariableSlider(FloatSlider):
@@ -33,32 +34,34 @@ class MultiVariableSlider(FloatSlider):
     are written back to the corresponding array element.
 
     Attributes:
-        arrayChanged: Emitted when the stored current-value array changes. The
-            emitted object is a copy of the internal NumPy array.
+        arrayChanged: Emitted when the user changes the stored current-value
+            array (dragging, context menu, dialogs). Programmatic methods such
+            as ``set_arr_values``, ``set_range`` or ``set_use_same_values`` do
+            not emit it. The emitted object is a copy of the array.
     """
 
     arrayChanged = Signal(object)
 
     def __init__(
-        self,
-        label: str,
-        html_label: str,
-        min_val: float,
-        max_val: float,
-        init_vals: Sequence[float | str],
-        init_idx: int = 0,
-        unit: str = "",
-        use_same_values: bool = False,
-        steps: int = 10000,
-        val_fmt: str = "{:.3f}",
-        min_limit: float | None = None,
-        max_limit: float | None = None,
-        min_limit_inclusive: bool = True,
-        max_limit_inclusive: bool = True,
-        show_range: bool = True,
-        orientation: Qt.Orientation = Qt.Horizontal,
-        editable: bool = True,
-        parent: Optional[QWidget] = None,
+            self,
+            label: str,
+            html_label: str,
+            min_val: float,
+            max_val: float,
+            init_vals: Sequence[float | str],
+            init_idx: int = 0,
+            unit: str = "",
+            use_same_values: bool = False,
+            steps: int = 10000,
+            val_fmt: str = "{:.3f}",
+            min_limit: float | None = None,
+            max_limit: float | None = None,
+            min_limit_inclusive: bool = True,
+            max_limit_inclusive: bool = True,
+            show_range: bool = True,
+            orientation: Qt.Orientation = Qt.Horizontal,
+            features: SliderFeature = SliderFeature.ALL,
+            parent: Optional[QWidget] = None,
     ):
         """Initialize the multi-variable slider.
 
@@ -79,15 +82,18 @@ class MultiVariableSlider(FloatSlider):
             max_limit: Optional upper hard limit.
             min_limit_inclusive: Whether the lower hard limit is inclusive.
             max_limit_inclusive: Whether the upper hard limit is inclusive.
-            show_range: Whether min/max range labels are shown.
+            show_range: Initial visibility of range labels and ticks; change
+                later with ``set_show_range``.
             orientation: Slider orientation.
-            editable: Whether right-click editing actions are enabled.
+            features: Context-menu features offered by the slider.
+                Defaults to ``SliderFeature.ALL``.
             parent: Optional parent widget.
 
         Raises:
             ValueError: If ``init_vals`` is empty, contains a finite value outside
-                the editable range, or contains an infinity marker that conflicts
-                with a corresponding hard limit.
+                the editable range, or contains an infinity marker that is not
+                permitted (missing ``SliderFeature.SPECIAL`` or a conflicting
+                hard limit).
         """
         init_vals = list(init_vals)
         if len(init_vals) == 0:
@@ -108,6 +114,8 @@ class MultiVariableSlider(FloatSlider):
                     )
                 finite_init_values.append(fv)
             else:
+                if SliderFeature.SPECIAL not in features:
+                    raise ValueError(f"init_values[{i}] is {sv!r}, which requires SliderFeature.SPECIAL")
                 if sv == "+inf" and max_limit is not None:
                     raise ValueError(f"init_values[{i}] cannot be +inf when max_limit is set")
                 if sv == "-inf" and min_limit is not None:
@@ -119,6 +127,7 @@ class MultiVariableSlider(FloatSlider):
         self._current_arr = np.asarray(finite_init_values.copy())
         self._default_arr = np.asarray(finite_init_values.copy())
         self._current_special_arr = init_special_arr.copy()
+        self._use_same_values = False
 
         init_val = init_special_arr[self._current_idx]
         if init_val is None:
@@ -138,18 +147,19 @@ class MultiVariableSlider(FloatSlider):
             max_limit_inclusive=max_limit_inclusive,
             show_range=show_range,
             orientation=orientation,
-            editable=editable,
+            features=features,
             parent=parent,
         )
 
         self.html_label = html_label
-        self._use_same_values = False
 
-        self._right_click_items.append({"id": "sep"})
-        self._right_click_items.append({"id": "show_val", "text": "Show Values..."})
+        if SliderFeature.VALUES in self._features:
+            self._right_click_items += [
+                {"id": "sep"},
+                {"id": "show_val", "text": "Show Values..."},
+            ]
 
-        self.set_arr_values(self._current_arr)
-        self.set_index(self._current_idx)
+        self.set_arr_values(self.get_arr_values(), idx=self._current_idx)
         self.set_use_same_values(use_same_values)
 
         self.valueChanged.connect(self._on_single_value_changed)
@@ -172,61 +182,52 @@ class MultiVariableSlider(FloatSlider):
             return "-inf"
         return self._value_to_text(self._current_arr[idx])
 
+    def _store_active(self) -> None:
+        """Write the active slider state into the stored arrays.
+
+        In same-values mode, every entry receives the active state.
+        """
+        cur = float(self._current_value)
+        dft = float(self._default_value)
+        sv = self._current_special_value
+        if self._use_same_values:
+            self._current_arr[:] = cur
+            self._default_arr[:] = dft
+            self._current_special_arr[:] = [sv] * self._arr_length
+        else:
+            i = self._current_idx
+            self._current_arr[i] = cur
+            self._default_arr[i] = dft
+            self._current_special_arr[i] = sv
+
     def _update_slider_for_current_idx(self) -> None:
         """Synchronize the base slider state with the currently selected index."""
-        self._current_value = self._current_arr[self._current_idx]
-        self._default_value = self._default_arr[self._current_idx]
+        self._current_value = float(self._current_arr[self._current_idx])
+        self._default_value = float(self._default_arr[self._current_idx])
         self._current_special_value = self._current_special_arr[self._current_idx]
 
         self._update_mapping_anchors()
-        self._apply_range_to_slider()
-
-        self.blockSignals(True)
-        try:
+        with self._quiet_updates():
+            self._apply_range_to_slider()
             self._slider.setValue(self._value_to_pos(self._current_value))
-        finally:
-            self.blockSignals(False)
 
         if self._current_special_value is not None:
             self._enter_special_mode(self._current_special_value)
         else:
             self._exit_special_mode()
 
+        if self._default_red_marker is not None:
+            self._default_red_marker.update()
         self._update_all_labels()
 
-    def _on_single_value_changed(self, new_value) -> None:
-        """Update the stored current-value array after the active value changes.
-
-        Args:
-            new_value: New active slider value. May be finite or a special
-                infinity marker.
-        """
-        sv = normalize_special_value(new_value)
-        if sv is None:
-            finite_value = float(new_value)
-            self._current_arr[self._current_idx] = finite_value
-            if self._use_same_values:
-                self._current_arr[:] = finite_value
-
-        self._current_special_arr[self._current_idx] = sv
-        if self._use_same_values:
-            self._current_special_arr[:] = [sv] * self._arr_length
-
+    def _on_single_value_changed(self, _value) -> None:
+        """Store the active value after a user change and report the array."""
+        self._store_active()
         self.arrayChanged.emit(self.get_arr_values())
 
-    def _on_single_default_changed(self, new_value: float) -> None:
-        """Update the stored default-value array after the active default changes.
-
-        Args:
-            new_value: New default value for the currently selected index.
-
-        Note:
-            If same-values mode is enabled, all default entries are replaced with
-            ``new_value``.
-        """
-        self._default_arr[self._current_idx] = new_value
-        if self._use_same_values:
-            self._default_arr[:] = new_value
+    def _on_single_default_changed(self, _value) -> None:
+        """Store the active default after a user change."""
+        self._store_active()
 
     # ----- right click -----
     def _right_click_requested(self, item_id, checked: bool) -> None:
@@ -241,11 +242,11 @@ class MultiVariableSlider(FloatSlider):
             self._open_show_values_dlg()
 
     def _open_edit_config_dlg(self) -> None:
-        """Open and apply the configuration dialog for range and display settings.
+        """Open and apply the configuration dialog for range and format.
 
-        On acceptance, this updates the stored format, numeric range, and
-        show-range state. If the new range would exclude current or default array
-        values, the user is asked whether those values should be clamped.
+        If the new range would exclude current or default array values, the
+        user is asked whether those values should be clamped. Cancelling
+        restores the previous format and values.
         """
         dlg = EditConfigDialog(
             slider_name=self._label_text,
@@ -253,50 +254,68 @@ class MultiVariableSlider(FloatSlider):
             min_val=self._min_value,
             max_val=self._max_value,
             val_fmt=self._val_fmt,
-            show_range=self._show_range,
             min_limit=self._min_limit,
             max_limit=self._max_limit,
             min_limit_inclusive=self._min_limit_inclusive,
             max_limit_inclusive=self._max_limit_inclusive,
+            validate=self._check_new_config,
         )
-        if dlg.exec() == QDialog.Accepted:
-            new_min, new_max, new_fmt, new_show_range = dlg.get_values()
+        if dlg.exec() != QDialog.Accepted:
+            return
+        new_min, new_max, new_fmt = dlg.get_values()
 
-            old_fmt = self._val_fmt
-            old_show_range = self._show_range
-            old_min = self._min_value
-            old_max = self._max_value
+        # snapshot before set_format rounds anything
+        old_fmt = self._val_fmt
+        old_min, old_max = self._min_value, self._max_value
+        saved_cur_arr = self._current_arr.copy()
+        saved_dft_arr = self._default_arr.copy()
+        saved_cur, saved_dft = self._current_value, self._default_value
+        old_arr_values = self.get_arr_values()
+        old_value = self.get_value()
 
-            self.set_format(new_fmt)
-            new_min = self.evaluate_value(new_min)
-            new_max = self.evaluate_value(new_max)
-            cur_min = np.min(self._current_arr)
-            cur_max = np.max(self._current_arr)
-            dft_min = np.min(self._default_arr)
-            dft_max = np.max(self._default_arr)
+        self.set_format(new_fmt)
+        new_min = self.evaluate_value(new_min)
+        new_max = self.evaluate_value(new_max)
 
-            if cur_min < new_min or dft_min < new_min or cur_max > new_max or dft_max > new_max:
+        # ±inf entries only hold a placeholder, so leave them out of the check
+        finite = np.array([sv is None for sv in self._current_special_arr])
+        cur_vals = self._current_arr[finite]
+        dft_vals = self._default_arr
+
+        cur_out = cur_vals.size > 0 and (cur_vals.min() < new_min or cur_vals.max() > new_max)
+        dft_out = dft_vals.min() < new_min or dft_vals.max() > new_max
+
+        if cur_out or dft_out:
+            self.set_border(SliderBorderState.ERROR)
+            try:
                 result = multi_slider_ask_clamp_value(
-                    proposed_range=f"[{new_min}, {new_max}]",
-                    cur_min=self._value_to_text(cur_min),
-                    cur_max=self._value_to_text(cur_max),
-                    dft_min=self._value_to_text(dft_min),
-                    dft_max=self._value_to_text(dft_max),
+                    proposed_range=f"[{self._value_to_text(new_min)}, {self._value_to_text(new_max)}]",
+                    cur_min=self._value_to_text(cur_vals.min()) if cur_vals.size else "-",
+                    cur_max=self._value_to_text(cur_vals.max()) if cur_vals.size else "-",
+                    dft_min=self._value_to_text(dft_vals.min()),
+                    dft_max=self._value_to_text(dft_vals.max()),
                     parent=self,
                 )
-                if result != AskResult.YES:
-                    self.set_format(old_fmt)
-                    return
+            finally:
+                self.set_border(SliderBorderState.OFF)
+            if result != AskResult.YES:
+                self.set_format(old_fmt)
+                self._current_arr, self._default_arr = saved_cur_arr, saved_dft_arr
+                self._current_value, self._default_value = saved_cur, saved_dft
+                self._min_value, self._max_value = old_min, old_max
+                return
 
-            self._show_range = new_show_range
-            self.set_range(new_min, new_max)
-            if (
-                old_min != new_min
-                or old_max != new_max
-                or old_fmt != new_fmt
-                or old_show_range != new_show_range
-            ):
-                self.configChanged.emit(self.get_config())
+        self.set_range(new_min, new_max)
+
+        # report what the user's change did
+        if self.get_value() != old_value:
+            self.valueChanged.emit(self.get_value())  # handler also emits arrayChanged
+        elif not np.array_equal(self.get_arr_values(), old_arr_values):
+            self.arrayChanged.emit(self.get_arr_values())
+        if self._default_value != saved_dft:
+            self.defaultChanged.emit(self._default_value)
+        if (old_min, old_max, old_fmt) != (self._min_value, self._max_value, self._val_fmt):
+            self.configChanged.emit(self.get_config())
 
     def _values_as_html(self) -> str:
         """Build an HTML table containing all current values.
@@ -393,21 +412,13 @@ class MultiVariableSlider(FloatSlider):
             val_fmt: New display format string.
 
         Note:
-            All stored current and default finite values are re-evaluated using
-            the new format. ``arrayChanged`` is emitted if any current value
-            changes as a result.
+            All stored current and default finite values are rounded to the
+            new format. No signals are emitted.
         """
         super().set_format(val_fmt)
-        cur_values_changed = False
         for i in range(self._arr_length):
-            old_cur = self._current_arr[i]
-            old_dft = self._default_arr[i]
-            new_cur = self._current_arr[i] = self.evaluate_value(old_cur)
-            new_dft = self._default_arr[i] = self.evaluate_value(old_dft)
-            if new_cur != old_cur:
-                cur_values_changed = True
-        if cur_values_changed:
-            self.arrayChanged.emit(self._current_arr.copy())
+            self._current_arr[i] = self.evaluate_value(self._current_arr[i])
+            self._default_arr[i] = self.evaluate_value(self._default_arr[i])
 
     def get_index(self) -> int:
         """Return the currently selected array index.
@@ -442,18 +453,28 @@ class MultiVariableSlider(FloatSlider):
                 out[i] = -math.inf
         return out
 
+    def set_value(self, value, keep_default_value: bool = False) -> None:
+        """Set the active value and store it in the array (no signals)."""
+        super().set_value(value, keep_default_value)
+        self._store_active()
+
+    def set_default_value(self, value: float) -> None:
+        """Set the active default and store it in the array (no signals)."""
+        super().set_default_value(value)
+        self._store_active()
+
     def set_arr_values(
-        self,
-        values: np.ndarray,
-        idx: int = 0,
-        default_preserve_mode: Literal["none", "first", "all"] = "none",
-        same_values_mode: Literal["ignore", "apply"] = "ignore",
+            self,
+            values: Sequence[float | str],
+            idx: int = 0,
+            default_preserve_mode: Literal["none", "first", "all"] = "none",
+            same_values_mode: Literal["ignore", "apply"] = "ignore",
     ) -> None:
         """Replace the stored current values array.
 
         Args:
-            values: New array of values. Must be non-empty, and each entry must
-                satisfy the slider's hard-limit constraints.
+            values: New values. Entries may be real numbers or ``±inf``
+                markers; each must satisfy the slider's limits and features.
             idx: Index to select after updating the array. Wrapped modulo the new
                 array length.
             default_preserve_mode: Policy for preserving old default values.
@@ -465,94 +486,68 @@ class MultiVariableSlider(FloatSlider):
                 mode.
 
                 - ``"ignore"``: Store ``values`` as provided.
-                - ``"apply"``: If same-values mode is enabled, force all current
-                  and default entries to match the selected entry.
+                - ``"apply"``: If same-values mode is enabled, force all entries
+                  (current, default and ±inf state) to match the selected entry.
 
         Note:
-            If the new values extend beyond the current editable range, the
-            stored minimum and/or maximum range is expanded to include them, and
-            ``configChanged`` is emitted.
+            All entries are validated before anything changes. If the new
+            values extend beyond the current editable range, the range is
+            expanded to include them. No signals are emitted.
 
         Raises:
-            ValueError: If ``values`` is empty, contains entries outside the
-                allowed hard limits, or if either mode argument is invalid.
+            ValueError: If ``values`` is empty, an entry violates the limits or
+                is a ±inf marker that is not permitted, or a mode is invalid.
+            TypeError: If an entry is neither a real number nor a ±inf marker.
         """
+        if default_preserve_mode not in {"none", "first", "all"}:
+            raise ValueError("default_preserve_mode must be one of: 'none', 'first', 'all'")
+        if same_values_mode not in {"ignore", "apply"}:
+            raise ValueError("same_values_mode must be one of: 'ignore', 'apply'")
+
         N = len(values)
         if N == 0:
             raise ValueError("values must not be empty")
 
-        for i in range(N):
-            if not self.value_in_limit(values[i]):
-                raise ValueError(self._range_err_msg(f"value_{i}"))
-
-        if default_preserve_mode not in {"none", "first", "all"}:
-            raise ValueError(
-                "default_preserve_mode must be one of: 'none', 'first', 'all'"
-            )
-
-        if same_values_mode not in {"ignore", "apply"}:
-            raise ValueError(
-                "same_values_mode must be one of: 'ignore', 'apply'"
-            )
-
-        old_default_arr = self._default_arr.copy()
-        selected_idx = idx % N
-
-        self._arr_length = N
-        new_current = []
-        new_special = []
-
+        # validate everything before touching the widget
+        new_current: list[float] = []
+        new_special: list[SpecialValue | None] = []
         for i, v in enumerate(values):
             sv = normalize_special_value(v)
-            if sv is None:
-                fv = self.evaluate_value(v)
-                if not self.value_in_limit(fv):
-                    raise ValueError(self._range_err_msg(f"value_{i}"))
-                new_current.append(fv)
-            else:
-                if sv == "+inf" and self._max_limit is not None:
-                    raise ValueError(self._range_err_msg(f"value_{i}"))
-                if sv == "-inf" and self._min_limit is not None:
-                    raise ValueError(self._range_err_msg(f"value_{i}"))
-                new_current.append(self._max_value if sv == "+inf" else self._min_value)
-
+            try:
+                if sv is None:
+                    new_current.append(self._validate_value(v))
+                else:
+                    self._check_special_permitted(sv)
+                    new_current.append(self._max_value if sv == "+inf" else self._min_value)
+            except (TypeError, ValueError) as e:
+                raise type(e)(f"values[{i}]: {e}") from None
             new_special.append(sv)
 
-        self._current_arr = np.asarray(new_current, dtype=float)
-        self._default_arr = self._current_arr.copy()
-        self._current_special_arr = new_special.copy()
+        selected_idx = idx % N
+        cur_arr = np.asarray(new_current, dtype=float)
+        dft_arr = cur_arr.copy()
 
         if default_preserve_mode == "first":
-            if len(old_default_arr) > 0:
-                self._default_arr[0] = old_default_arr[0]
+            dft_arr[0] = self._default_arr[0]
         elif default_preserve_mode == "all":
-            n_copy = min(len(old_default_arr), N)
-            self._default_arr[:n_copy] = old_default_arr[:n_copy]
+            n_copy = min(len(self._default_arr), N)
+            dft_arr[:n_copy] = self._default_arr[:n_copy]
 
         if same_values_mode == "apply" and self._use_same_values:
-            self._current_arr[:] = self._current_arr[selected_idx]
-            self._default_arr[:] = self._default_arr[selected_idx]
+            cur_arr[:] = cur_arr[selected_idx]
+            dft_arr[:] = dft_arr[selected_idx]
+            new_special = [new_special[selected_idx]] * N
 
-        min_values = np.min(self._current_arr)
-        max_values = np.max(self._current_arr)
+        # commit
+        self._arr_length = N
+        self._current_arr = cur_arr
+        self._default_arr = dft_arr
+        self._current_special_arr = new_special
+        self._min_value = min(self._min_value, float(cur_arr.min()))
+        self._max_value = max(self._max_value, float(cur_arr.max()))
 
-        min_val = self._min_value
-        max_val = self._max_value
-        extended = False
-
-        if min_values < min_val:
-            min_val = min_values
-            extended = True
-        if max_values > max_val:
-            max_val = max_values
-            extended = True
-
-        self._min_value = min_val
-        self._max_value = max_val
         self.set_index(selected_idx)
-
-        if extended:
-            self.configChanged.emit(self.get_config())
+        self._update_value_width()
 
     def set_range(self, min_val: float, max_val: float) -> None:
         """Set the editable numeric range and clamp stored values if needed.
@@ -563,8 +558,8 @@ class MultiVariableSlider(FloatSlider):
 
         Note:
             Both the current and default arrays are clamped to the new range. The
-            underlying slider, labels, and layout are refreshed. ``arrayChanged``
-            is emitted if any current value is clamped.
+            underlying slider, labels, and layout are refreshed. No signals are
+            emitted.
 
         Raises:
             ValueError: If ``min_val >= max_val`` or either bound violates the
@@ -573,51 +568,41 @@ class MultiVariableSlider(FloatSlider):
         new_min_val, new_max_val = self._validate_range(min_val, max_val)
         self._min_value = new_min_val
         self._max_value = new_max_val
-        cur_clamped = False
         for i in range(self._arr_length):
             cur_val = self._current_arr[i]
             dft_val = self._default_arr[i]
             if cur_val < new_min_val:
                 self._current_arr[i] = new_min_val
-                cur_clamped = True
             elif cur_val > new_max_val:
                 self._current_arr[i] = new_max_val
-                cur_clamped = True
             if dft_val < new_min_val:
                 self._default_arr[i] = new_min_val
             elif dft_val > new_max_val:
                 self._default_arr[i] = new_max_val
 
-        self._current_value = self._current_arr[self._current_idx]
-        self._default_value = self._default_arr[self._current_idx]
+        self._current_value = float(self._current_arr[self._current_idx])
+        self._default_value = float(self._default_arr[self._current_idx])
 
         self._update_mapping_anchors()
-        self._apply_range_to_slider()
-        self.blockSignals(True)
-        try:
+        with self._quiet_updates():
+            self._apply_range_to_slider()
             self._slider.setValue(self._value_to_pos(self._current_value))
-        finally:
-            self.blockSignals(False)
         self._update_all_labels()
         self._update_value_width()
         self._update_layout()
 
-        if cur_clamped:
-            self.arrayChanged.emit(self._current_arr.copy())
-
     def set_use_same_values(self, same: bool) -> None:
         """Enable or disable same-values mode.
+
+        When enabled, all entries take the active value, default and special
+        state. No signals are emitted.
 
         Args:
             same: Whether all entries should track the currently selected value.
         """
-        self._use_same_values = same
+        self._use_same_values = bool(same)
         if same:
-            self._current_arr[:] = self._current_value
-            self._default_arr[:] = self._default_value
-            self._current_special_arr[:] = [self._current_special_value] * self._arr_length
-            self.arrayChanged.emit(self.get_arr_values())
-
+            self._store_active()
         self._update_slider_for_current_idx()
 
     def get_arr_length(self) -> int:
@@ -635,10 +620,11 @@ class MultiVariableSlider(FloatSlider):
             arr_length: New array length. Must be greater than zero.
 
         Note:
-            When extending the arrays, new entries are filled with the value and
-            default value from index 0. When shrinking, trailing entries are
-            discarded. If the current index becomes invalid after shrinking, it
-            is reset to 0.
+            When extending the arrays, new entries are filled with the value,
+            default value and ±inf state from index 0. When shrinking, trailing
+            entries are discarded. If the current index becomes invalid after
+            shrinking, the last remaining index is selected. No signals are
+            emitted.
 
         Raises:
             ValueError: If ``arr_length <= 0``.
@@ -672,9 +658,9 @@ class MultiVariableSlider(FloatSlider):
 
         self._arr_length = arr_length
         if self._current_idx >= self._arr_length:
-            self._current_idx = 0
+            self._current_idx = self._arr_length - 1
         self._update_slider_for_current_idx()
-        self.arrayChanged.emit(self._current_arr.copy())
+        self._update_value_width()
 
 
 def _demo_main() -> int:
@@ -721,6 +707,7 @@ def _demo_main() -> int:
     def on_same_value():
         """Toggle same-values mode from the checkbox state."""
         slider.set_use_same_values(cb_same.isChecked())
+        val_l.setText(f"Values: {slider.get_arr_values()}")
 
     cb_same = QCheckBox("Same Value")
 
