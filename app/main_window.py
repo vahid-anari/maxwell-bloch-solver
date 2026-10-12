@@ -103,10 +103,11 @@ show_splash_message("Importing config packages / status bar...")
 from ui.status_bar_controller import StatusBarController, StatusState
 
 show_splash_message("Importing config packages / helper functions...")
-from utils.helper_funcs import pretty_json, read_json, set_nested_bool_key, set_win_center
+from utils.helper_funcs import pretty_json, read_json, set_win_center
 from utils.solver_step_viewer import StepScatterWidget
 from utils.units import VELOCITY_UNIT_TEXT
 from app_io.legacy_keys import merge_onto_defaults
+from ui.params.slider_base import SliderWidgetBase
 
 MENU_CHECKABLE_IDS = (
     "show_time_major_grid",
@@ -984,9 +985,8 @@ class MBESolverApp(QMainWindow):
         Args:
             visible: Whether slider range labels should be visible.
         """
-        cfg = self._parameter_tabs.get_config()
-        set_nested_bool_key(cfg, "show_range", visible)
-        self._parameter_tabs.set_config(cfg)
+        for slider in self._parameter_tabs.findChildren(SliderWidgetBase):
+            slider.set_show_range(visible)
 
     # ---- Info menu ----
     def _show_data_information(self) -> None:
