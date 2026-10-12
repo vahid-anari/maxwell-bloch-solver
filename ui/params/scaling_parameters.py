@@ -19,9 +19,10 @@ from PySide6.QtWidgets import (
 
 from settings.app_style import SCALING_PARAMS_MAP_GROUP_ID_TO_LABEL, USE_LATEX
 from settings.ui_defaults import SCALING_PARAM_DIGIT, SCALING_PARAM_SIZE
+from sciwidgets.formatting import pretty_sci_text
 from sciwidgets.labels import MathLabel
 from utils.constants_si import C, EPSILON_0, H_BAR, MU_0, PI
-from utils.helper_funcs import make_box, pretty_sci_text
+from utils.helper_funcs import make_box
 
 
 class ScalingParameter:

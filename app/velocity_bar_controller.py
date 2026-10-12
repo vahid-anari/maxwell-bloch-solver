@@ -27,8 +27,9 @@ from PySide6.QtWidgets import (
 
 from dialogs.dialogs import AskResult, ask_question, show_information
 from settings.app_style import VELOCITY_COMBO_WIDTH
+from sciwidgets.formatting import value_to_text
 from sciwidgets.labels import MathLabel
-from utils.helper_funcs import set_widget_width, value_to_text
+from utils.helper_funcs import set_widget_width
 from utils.units import VELOCITY_UNIT_LATEX
 
 
