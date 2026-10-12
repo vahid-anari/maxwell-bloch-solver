@@ -29,6 +29,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     """
     argv = list(sys.argv if argv is None else argv)
     app = QApplication(argv)
+    try:
+        import sciwidgets  # noqa: F401
+    except ImportError:
+        from PySide6.QtWidgets import QMessageBox
+
+        QMessageBox.critical(
+            None,
+            "Missing package",
+            "This version needs the 'sciwidgets' package.\n\n"
+            "In the app's folder, run:\n\n"
+            "    pip install -r requirements.txt\n\n"
+            "then start the app again.",
+        )
+        return 1
     app.setWindowIcon(QIcon(str(APP_ICON_PATH)))
     app.setApplicationDisplayName("Maxwell Bloch Solver")
 

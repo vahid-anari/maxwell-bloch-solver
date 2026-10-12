@@ -1081,7 +1081,8 @@ class MBESolverApp(QMainWindow):
             text=f"<b>{APP_NAME} {latest}</b> is available.\nYou have version {APP_VERSION}.",
             informative_text=(
                 "Download the new version now?\n"
-                "Unzip it and replace your current copy of the app."
+                "Unzip it, replace your current copy of the app, then run\n"
+                "pip install -r requirements.txt in its folder."
             ),
             yes_btn_label="Download",
             cancel_btn_label="Later",

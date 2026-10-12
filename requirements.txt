@@ -4,3 +4,4 @@ numba
 matplotlib
 psutil
 pygments
+sciwidgets @ https://github.com/vahid-anari/sciwidgets/archive/refs/tags/v0.1.0.zip
