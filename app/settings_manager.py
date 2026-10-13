@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
     from app.parameter_tabs import ParameterTabsWidget
     from app.plot import PlotCanvas
-    from ui.menu_bar_controller import MenuBarController
+    from sciwidgets.window import MenuBarController
 
 APP_DEFAULT_CONFIG_KEY = "defaults/parameter_tabs_config"
 """QSettings key used for default parameter-tab configuration."""

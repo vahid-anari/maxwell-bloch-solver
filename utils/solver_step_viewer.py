@@ -301,7 +301,7 @@ def _demo_main() -> int:
     """
 
     import sys
-    from ui.menu_bar_controller import MenuBarController
+    from sciwidgets.window import MenuBarController
     from settings.app_style import set_app_style
 
     class MainWindow(QMainWindow):

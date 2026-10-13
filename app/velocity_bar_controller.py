@@ -481,7 +481,7 @@ def _demo_main() -> int:
     """
 
     from settings.app_style import set_app_style
-    from ui.menu_bar_controller import MENU_SPEC_EXAMPLE, MenuBarController
+    from sciwidgets.window import MenuBarController
     from sciwidgets.params import FloatSlider
 
     class MainWindow(QMainWindow):
@@ -495,7 +495,8 @@ def _demo_main() -> int:
             self._label = MathLabel(r"\alpha_\beta")
             self._mark_dirty_btn = QPushButton("Modified")
             self._vc = VelocityBarController(window=self)
-            self._menu_ctrl = MenuBarController(self, menu_spec=MENU_SPEC_EXAMPLE, native_menubar=False)
+            self._menu_ctrl = MenuBarController(self, menu_spec={
+                "File": [{"id": "quit", "text": "Quit", "shortcut": "Ctrl+Q"}]}, native_menubar=False)
             self._fs = FloatSlider(
                 label=r"\chi^2",
                 min_val=0.0,

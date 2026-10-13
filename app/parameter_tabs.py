@@ -461,7 +461,7 @@ def _demo_main() -> int:
     from PySide6.QtWidgets import QApplication, QMainWindow
     from paths import SETTINGS_FILE_PATH
     from settings.app_style import set_app_style
-    from ui.menu_bar_controller import MenuBarController
+    from sciwidgets.window import MenuBarController
     from utils.helper_funcs import read_json
 
     class MainWindow(QMainWindow):

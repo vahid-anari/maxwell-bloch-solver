@@ -97,10 +97,9 @@ from settings.app_style import set_app_style
 from settings.ui_defaults import NATIVE_MENU_BAR
 
 show_splash_message("Importing config packages / menu bar...")
-from ui.menu_bar_controller import MenuBarController
-
 show_splash_message("Importing config packages / status bar...")
-from ui.status_bar_controller import StatusBarController, StatusState
+from enum import Enum
+from sciwidgets.window import MenuBarController, StatusBarController
 
 show_splash_message("Importing config packages / helper functions...")
 from utils.helper_funcs import pretty_json, read_json, set_win_center
@@ -108,6 +107,17 @@ from utils.solver_step_viewer import StepScatterWidget
 from utils.units import VELOCITY_UNIT_TEXT
 from app_io.legacy_keys import merge_onto_defaults
 from sciwidgets.params import SliderWidgetBase
+
+
+class StatusState(str, Enum):
+    """States shown in the status bar."""
+
+    READY = "Ready"
+    IMPORTING = "Importing…"
+    SAVING = "Saving…"
+    SOLVING = "Solving…"
+    EXPORTING = "Exporting…"
+    ERROR = "Error"
 
 MENU_CHECKABLE_IDS = (
     "show_time_major_grid",
@@ -206,7 +216,7 @@ class MBESolverApp(QMainWindow):
             parent=self,
             on_finished=self._on_solve_finished,
             get_params=self._parameter_tabs.get_value,
-            on_state_solving=lambda: self._status_bar.set_state(StatusState.SOLVING),
+            on_state_solving=lambda: self._status_bar.set_state(StatusState.SOLVING, busy=True),
             on_state_ready=lambda: self._status_bar.set_state(StatusState.READY),
         )
 
@@ -238,7 +248,7 @@ class MBESolverApp(QMainWindow):
         # ---- menu bar (needs coordinator objects ready) ----
         menu_spec = self._build_menu_spec()
         self._menu_bar = MenuBarController(self, menu_spec=menu_spec, native_menubar=NATIVE_MENU_BAR)
-        self._status_bar = StatusBarController(self)
+        self._status_bar = StatusBarController(self, states=list(StatusState))
 
         # ---- bottom panel selector ----
         self._bottom_plot_combo = self._make_curve_selector(self._canvas.get_profile_combo_labels())
@@ -269,7 +279,7 @@ class MBESolverApp(QMainWindow):
         self._settings.line_colors.update_all_menu_icons(self._menu_bar)
         self._update_bottom_plot_combo_icons()
         self._pipeline.tasks.set_all()
-        self._status_bar.set_path_modified()
+        self._status_bar.set_modified()
         self._on_bottom_plot_changed()
         QTimer.singleShot(0, self._solver.solve)
         QTimer.singleShot(2000, self._update_checker.check)
@@ -833,7 +843,7 @@ class MBESolverApp(QMainWindow):
         self._parameter_tabs.set_value(copy.deepcopy(params))
         self._pipeline.tasks.set_all()
         self._solver.solve()
-        self._status_bar.set_path_modified()
+        self._status_bar.set_modified()
 
     def _save_data_folder(self) -> None:
         """Save all current fit parameters to the loaded data folder on disk."""
@@ -1212,7 +1222,7 @@ class MBESolverApp(QMainWindow):
             value: New widget value.
         """
         self._velocity_bar.set_modified()
-        self._status_bar.set_path_modified()
+        self._status_bar.set_modified()
 
         tasks = self._pipeline.tasks
         category = path.split(".")[0] if path else ""
