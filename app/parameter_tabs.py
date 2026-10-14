@@ -6,21 +6,15 @@ parameter-side UI can be assembled declaratively.
 
 from __future__ import annotations
 
-"""QTabWidget-based UI that groups parameter controls into categories."""
-
 import copy
 import sys
 from pathlib import Path
 from typing import Any, Dict
 
-from PySide6.QtCore import QRect, QSize, Signal
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
-    QStyle,
-    QStyleOptionTab,
-    QStylePainter,
-    QTabBar,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -42,57 +36,6 @@ from sciwidgets.params import (
 )
 from ui.params.sample_properties import SamplePropertiesWidget
 from utils.helper_funcs import make_layout, parse_orientation, pretty_json, set_win_center
-
-
-class HorizontalWestTabBar(QTabBar):
-    """Tab bar that paints west-positioned tab text horizontally."""
-
-    def tabSizeHint(self, index: int) -> QSize:
-        """Return the preferred size for one tab.
-
-        Args:
-            index: Tab index.
-
-        Returns:
-            Preferred tab size with width and height transposed for west/east
-            placement.
-        """
-
-        s = super().tabSizeHint(index)
-        s.transpose()
-        return s
-
-    def paintEvent(self, event):
-        """Handle the Qt paint-event callback.
-
-        Args:
-            event: Qt paint event.
-        """
-
-        painter = QStylePainter(self)
-        opt = QStyleOptionTab()
-
-        for i in range(self.count()):
-            self.initStyleOption(opt, i)
-            painter.drawControl(QStyle.CE_TabBarTabShape, opt)
-
-            painter.save_parameters()
-
-            size = opt.rect.size()
-            size.transpose()
-            r = QRect(opt.rect)
-            r.setSize(size)
-            r.moveCenter(opt.rect.center())
-            opt.rect = r
-
-            c = self.tabRect(i).center()
-            painter.translate(c)
-            painter.rotate(90)
-            painter.translate(-c)
-
-            painter.drawControl(QStyle.CE_TabBarTabLabel, opt)
-            painter.restore()
-
 
 class ParameterTabsWidget(QTabWidget):
     """Tab widget that builds parameter controls from a configuration mapping."""
