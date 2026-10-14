@@ -374,14 +374,20 @@ class PlotExporter:
         """
         zero_line.set_color(color)
         zero_line.set_alpha(0.6)
-        grids = self._canvas.get_config().get("axes", {})
+        config = self._canvas.get_config()
+        grids = config.get("axes", {})
+        user_style = config.get("grid_style", {})
         time_grid = grids.get("top", {})
         y_grid = grids.get(self._GRID_AXIS[y_prefix], {})
         for which in ("major", "minor"):
-            ax.grid(bool(time_grid.get(f"x_{which}")), which=which, axis="x")
+            if time_grid.get(f"x_{which}"):
+                ax.grid(True, which=which, axis="x", **user_style)
+            else:
+                ax.grid(False, which=which, axis="x")
             if y_grid.get(f"y_{which}"):
-                ax.grid(True, which=which, axis="y", color=color, alpha=0.3,
-                        linestyle=":" if dotted else "-")
+                props = {"color": color, "alpha": 0.3,
+                         "linestyle": ":" if dotted else "-", **user_style}
+                ax.grid(True, which=which, axis="y", **props)
             else:
                 ax.grid(False, which=which, axis="y")
 
