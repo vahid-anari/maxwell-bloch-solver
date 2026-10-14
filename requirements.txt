@@ -4,4 +4,4 @@ numba
 matplotlib
 psutil
 pygments
-sciwidgets~=0.3.0
+sciwidgets~=0.4.0

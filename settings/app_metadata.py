@@ -12,7 +12,7 @@ import re
 APP_NAME = "Maxwell Bloch Solver"
 """Human-readable application name."""
 
-APP_VERSION = "8.11.0"
+APP_VERSION = "8.12.0"
 """Application version string."""
 
 APP_AUTHOR_NAME = "Vahid Anari"
