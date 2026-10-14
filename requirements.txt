@@ -1,7 +1,7 @@
 PySide6
 numpy
-numba
 matplotlib
 psutil
 pygments
 sciwidgets~=0.5.0
+maxbloch~=0.1.0

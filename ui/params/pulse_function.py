@@ -749,7 +749,7 @@ def _demo_main() -> int:
     from matplotlib.figure import Figure
     from PySide6.QtWidgets import QApplication
     from settings.app_style import set_app_style
-    from solver.profiles import pulse_func
+    from maxbloch.profiles import pulse_func
 
     app = QApplication(sys.argv)
     set_app_style(app)

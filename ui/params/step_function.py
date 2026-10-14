@@ -38,7 +38,7 @@ class StepFunctionWidget(ParameterWidgetBase):
 
     With N = 1 the profile is a constant and ``get_value`` returns a float.
     With N > 1 it is a sequence of smoothed steps between N levels and
-    ``get_value`` returns a mapping (see ``step_func``).
+    ``get_value`` returns a mapping (see ``app.solver_adapter.steps_from_value``).
     """
     def __init__(
             self,
@@ -898,7 +898,9 @@ def _demo_main() -> int:
     from matplotlib.figure import Figure
     from PySide6.QtWidgets import QApplication
     from settings.app_style import set_app_style
-    from solver.profiles import step_func
+    from maxbloch.profiles import evaluate
+
+    from app.solver_adapter import steps_from_value
 
     app = QApplication(sys.argv)
     set_app_style(app)
@@ -999,7 +1001,7 @@ def _demo_main() -> int:
         Args:
             params_values: Current parameter mapping returned by the widget.
         """
-        new_y = step_func(value=params_values, x=x)
+        new_y = evaluate(steps_from_value(params_values), x)
         line.set_ydata(new_y)
         dy = new_y.max() - new_y.min()
         if dy == 0.0:

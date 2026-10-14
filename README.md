@@ -9,7 +9,7 @@ A PySide6 desktop application for simulating, visualizing, and fitting one-dimen
 ## Features
 
 - Interactive GUI for Maxwell-Bloch model configuration and visualization.
-- Numba-accelerated numerical solver using Runge-Kutta time stepping.
+- Numba-accelerated numerical solver using Runge-Kutta time stepping, from the [maxbloch](https://github.com/vahid-anari/maxbloch) package.
 - Light-curve import from velocity-tagged text files.
 - Support for period-tagged source folders, e.g. multiple folded periods for the same source.
 - Adjustable source, sample, initial-condition, pump-profile, and plotting parameters.
@@ -25,7 +25,6 @@ A PySide6 desktop application for simulating, visualizing, and fitting one-dimen
 ├── main.py                    # Application entry point
 ├── app/                       # Main window, plotting, solver controller, update pipeline
 ├── app_io/                    # Data and parameter import/export helpers
-├── solver/                    # Maxwell-Bloch numerical solver
 ├── ui/                        # Qt widgets, sliders, labels, menus, status bar
 ├── dialogs/                   # Application dialogs
 ├── settings/                  # App metadata, style, defaults, and settings JSON
@@ -57,7 +56,7 @@ pip install -r requirements.txt
 If you do not use `requirements.txt`, install the main packages manually:
 
 ```bash
-pip install PySide6 numpy numba matplotlib psutil pygments
+pip install PySide6 numpy matplotlib psutil pygments sciwidgets maxbloch
 ```
 
 ## Running the application

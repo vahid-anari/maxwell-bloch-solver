@@ -30,14 +30,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     argv = list(sys.argv if argv is None else argv)
     app = QApplication(argv)
     try:
+        import maxbloch  # noqa: F401
         import sciwidgets  # noqa: F401
-    except ImportError:
+    except ImportError as exc:
         from PySide6.QtWidgets import QMessageBox
 
         QMessageBox.critical(
             None,
             "Missing package",
-            "This version needs the 'sciwidgets' package.\n\n"
+            f"This version needs the '{exc.name}' package.\n\n"
             "In the app's folder, run:\n\n"
             "    pip install -r requirements.txt\n\n"
             "then start the app again.",

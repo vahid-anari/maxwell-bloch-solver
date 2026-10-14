@@ -11,7 +11,7 @@ from shiboken6 import isValid
 
 from PySide6.QtCore import QObject, QThread, Signal
 
-from solver.maxwell_bloch import solve_maxwell_bloch
+from app.solver_adapter import solve_maxwell_bloch
 
 
 class SolverWorker(QObject):
