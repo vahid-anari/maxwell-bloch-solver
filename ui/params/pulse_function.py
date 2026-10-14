@@ -35,8 +35,9 @@ class PulseFunctionWidget(ParameterWidgetBase):
 
     def __init__(
             self,
-            params_props: Dict[str, Any],
+            params_props: Optional[Dict[str, Any]] = None,
             parent: Optional[QWidget] = None,
+            **props: Any,
     ):
         """Initialize the sech^2 function editor widget.
 
@@ -44,9 +45,13 @@ class PulseFunctionWidget(ParameterWidgetBase):
             params_props: Mapping that defines slider, checkbox, and formula
                 properties used to build the widget.
             parent: Optional parent widget.
+            **props: The same properties as keyword arguments, as the
+                parameter panel passes them; merged into ``params_props``.
         """
 
         super().__init__(parent)
+
+        params_props = {**(params_props or {}), **props}
 
         self._symmetric = params_props.get("symmetric", True)
         self._arr_length = params_props.get("arr_length", 1)

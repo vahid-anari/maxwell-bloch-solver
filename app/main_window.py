@@ -192,11 +192,10 @@ class MBESolverApp(QMainWindow):
 
         default_config = read_json(SETTINGS_FILE_PATH)
         self._default_config = copy.deepcopy(default_config)
-        self._factory_default_config = copy.deepcopy(default_config["tabs"])
 
         # ---- build primary widgets ----
         self._velocity_bar = VelocityBarController(window=self)
-        self._parameter_tabs = ParameterTabsWidget(copy.deepcopy(self._factory_default_config))
+        self._parameter_tabs = ParameterTabsWidget(default_config["panel"])
         self._canvas = PlotCanvas(
             figure_props=default_config["figure"],
             axes_props=default_config["axes"],
@@ -268,6 +267,7 @@ class MBESolverApp(QMainWindow):
         self._update_checker.upToDate.connect(self._on_up_to_date)
         self._update_checker.checkFailed.connect(self._on_update_check_failed)
 
+        self._factory_default_config = self._parameter_tabs.get_config()
         self._factory_default_params = self._parameter_tabs.get_value()
         self._apply_saved_defaults()
 
@@ -1201,7 +1201,7 @@ class MBESolverApp(QMainWindow):
             data = self._bottom_plot_combo.itemData(i)
             if data is None:
                 continue
-            self._parameter_tabs.show_widget(f"display.range.{data}", data == bottom_plot)
+            self._parameter_tabs.set_widget_visible(f"display.range.{data}", data == bottom_plot)
         self._pipeline.request(plot=True, current_span=True)
 
     def _on_show_w_toggled(self, checked: bool, persist: bool = True) -> None:
@@ -1212,7 +1212,7 @@ class MBESolverApp(QMainWindow):
             persist: Whether to save the choice as a view preference.
         """
         self._canvas.set_w_visible(checked)
-        self._parameter_tabs.show_widget("display.range.w", checked)
+        self._parameter_tabs.set_widget_visible("display.range.w", checked)
         self._canvas.redraw()
         if persist:
             self._settings.set_view_preference("show_w", checked)

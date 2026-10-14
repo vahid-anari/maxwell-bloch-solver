@@ -42,8 +42,9 @@ class StepFunctionWidget(ParameterWidgetBase):
     """
     def __init__(
             self,
-            params_props: Dict[str, Any],
+            params_props: Optional[Dict[str, Any]] = None,
             parent: Optional[QWidget] = None,
+            **props: Any,
     ):
         """Initialize the step function editor widget.
 
@@ -51,9 +52,13 @@ class StepFunctionWidget(ParameterWidgetBase):
             params_props: Mapping that defines slider, checkbox, and formula
                 properties used to build the widget.
             parent: Optional parent widget.
+            **props: The same properties as keyword arguments, as the
+                parameter panel passes them; merged into ``params_props``.
         """
 
         super().__init__(parent)
+
+        params_props = {**(params_props or {}), **props}
 
         self._applying_value = False
         self._symmetric = params_props.get("symmetric", True)

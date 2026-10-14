@@ -1,7 +1,10 @@
-"""Tab-based container for grouped parameter widgets.
+"""MB Solver's parameter tabs, built with the sciwidgets parameter panel.
 
-The widget definitions are driven by the JSON settings file so the
-parameter-side UI can be assembled declaratively.
+The tabs come from the ``"panel"`` section of ``settings/settings.json`` (see
+``sciwidgets.panel``). This module adds what is specific to MB Solver: its own
+widget types (pulse, step, initial conditions, sample properties), the
+current-span signals for the pulse and step tabs, the Fit tab switch and the
+scaling-formula dialog.
 """
 
 from __future__ import annotations
@@ -9,393 +12,109 @@ from __future__ import annotations
 import copy
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Mapping
 
 from PySide6.QtCore import Signal
-from PySide6.QtWidgets import (
-    QHBoxLayout,
-    QLabel,
-    QTabWidget,
-    QVBoxLayout,
-    QWidget,
-)
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
+from sciwidgets.panel import ParameterTabs, register_type, widget_types
 from settings.ui_defaults import SLIDER_SHOW_RANGE
-from ui.params.pulse_function import PulseFunctionWidget
-from ui.params.step_function import StepFunctionWidget
 from ui.params.initial_conditions import InitialConditionsWidget
-from sciwidgets.params import (
-    ArraySlider,
-    FloatRangeSlider,
-    FloatSlider,
-    IntSlider,
-    ParameterComboBox,
-    ParameterLineEdit,
-    ParameterToggle,
-    ParameterWidgetBase,
-)
+from ui.params.pulse_function import PulseFunctionWidget
 from ui.params.sample_properties import SamplePropertiesWidget
-from utils.helper_funcs import make_layout, parse_orientation, pretty_json, set_win_center
+from ui.params.step_function import StepFunctionWidget
+from utils.helper_funcs import pretty_json, set_win_center
 
-class ParameterTabsWidget(QTabWidget):
-    """Tab widget that builds parameter controls from a configuration mapping."""
+APP_WIDGET_TYPES = {
+    "pulse": PulseFunctionWidget,
+    "step": StepFunctionWidget,
+    "ics": InitialConditionsWidget,
+    "sample-props": SamplePropertiesWidget,
+}
+"""MB Solver's own widget types, usable in the panel description."""
 
-    valueChanged = Signal(str, object)
-    configChanged = Signal(str, object)
+
+def _register_app_types() -> None:
+    """Register MB Solver's widget types with the panel (once)."""
+    known = set(widget_types())
+    for name, cls in APP_WIDGET_TYPES.items():
+        if name not in known:
+            register_type(name, cls)
+
+
+class ParameterTabsWidget(ParameterTabs):
+    """Parameter tabs with MB Solver's widget types and current-span signals.
+
+    Signals:
+        valueChanged (str, object): The user changed a value (path, value).
+        configChanged (str, object): The user changed a configuration
+            (path, config).
+        spanChanged (str): The parameters of the pulse or step widget at this
+            path changed, or its tab was brought to the front.
+        showSpan (bool): Whether the tab in front has a pulse or step widget,
+            i.e. whether the plot should show its current span.
+    """
+
     spanChanged = Signal(str)
     showSpan = Signal(bool)
 
-    def __init__(self, tabs_cfg: Dict[str, Any]) -> None:
-        """Initialize the parameter-tabs widget.
+    def __init__(self, description: Mapping[str, Any]) -> None:
+        """Build the tabs.
 
         Args:
-            tabs_cfg: Mapping describing tabs, widgets, and layout properties.
+            description: The ``"panel"`` section of the settings file.
         """
+        _register_app_types()
+        description = copy.deepcopy(dict(description))
+        if not SLIDER_SHOW_RANGE:
+            description["defaults"] = {"show_range": False, **description.get("defaults", {})}
+        super().__init__(description)
 
-        super().__init__()
-
-        self._widgets_by_tabs: Dict[str, Dict[str, ParameterWidgetBase]] = {}
-        self._widgets_by_path: Dict[str, ParameterWidgetBase] = {}
-        self._value = {}
-        self._config = {}
-        self._tabs_with_span: Dict[int, str] = {}
-        self._fit_tab_index = None
-
-        self.setTabsClosable(False)
-
-        for idx, (tab_id, tab_ctx) in enumerate(tabs_cfg.items()):
-            if tab_id == "fit":
-                self._fit_tab_index = idx
-            tab_widgets_def = tab_ctx.get("widgets", {})
-            tab_props = tab_ctx.get("props", {})
-            self._widgets_by_tabs[tab_id] = {}
-            for w_id, w_ctx in tab_widgets_def.items():
-                w = self._make_widget(w_ctx)
-                self._widgets_by_tabs[tab_id][w_id] = w
-                w.valueWidthChanged.connect(lambda _, t_id=tab_id: self._update_tab_layout(t_id))
-                w.nameWidthChanged.connect(lambda _, t_id=tab_id: self._update_tab_layout(t_id))
-
-                path = w_ctx.get("path", "")
-                if path:
-                    self._widgets_by_path[path] = w
-                    emit_span_changed = False
-                    if isinstance(w, PulseFunctionWidget) or isinstance(w, StepFunctionWidget):
-                        self._tabs_with_span[idx] = path
-                        emit_span_changed = True
-                    w.valueChanged.connect(
-                        lambda val, p=path, emit=emit_span_changed: self._on_value_changed(
-                            path=p,
-                            value=val,
-                            emit_span_changed=emit,
-                        )
-                    )
-
-                    w.configChanged.connect(
-                        lambda cfg, p=path: self._on_config_changed(
-                            path=p,
-                            config=cfg,
-                        )
-                    )
-
-            self._add_tab(tab_id, tab_props)
-
-        for p, w in sorted(self._widgets_by_path.items()):
-            self._value[p] = w.get_value()
-            self._config[p] = w.get_config()
+        # Tabs whose pulse/step widget drives the current span on the plot
+        self._span_path_by_tab: Dict[str, str] = {}
+        for path, widget in self.items():
+            if isinstance(widget, (PulseFunctionWidget, StepFunctionWidget)):
+                tab_id = next(t for t in self.tab_ids() if path in self.page(t).paths())
+                self._span_path_by_tab[tab_id] = path
+                widget.valueChanged.connect(lambda _, p=path: self.spanChanged.emit(p))
 
         self.currentChanged.connect(self._on_current_tab_changed)
 
-    def _make_widget(self, widget_ctx: Dict[str, Any]) -> ParameterWidgetBase:
-        """Create one child widget from the supplied configuration.
-
-        Args:
-            widget_ctx: Widget specification mapping.
-
-        Returns:
-            Instantiated parameter widget.
-
-        Raises:
-            ValueError: If the widget type is unknown.
-        """
-
-        w_label = widget_ctx.get("label", "None")
-        w_type = widget_ctx.get("type", "None")
-        if w_type == "int-slider":
-            return IntSlider(
-                label=w_label,
-                unit=widget_ctx.get("unit", ""),
-                min_val=widget_ctx.get("min_val", 0),
-                max_val=widget_ctx.get("max_val", 100),
-                init_val=widget_ctx.get("init_val", 0),
-                val_fmt=widget_ctx.get("val_fmt", "{:.3S}"),
-                min_limit=widget_ctx.get("min_limit", None),
-                min_limit_inclusive=widget_ctx.get("min_limit_inclusive", True),
-                max_limit=widget_ctx.get("max_limit", None),
-                max_limit_inclusive=widget_ctx.get("max_limit_inclusive", True),
-                orientation=parse_orientation(widget_ctx.get("orientation", "h")),
-                show_range=widget_ctx.get("show_range", True) if SLIDER_SHOW_RANGE else False,
-            )
-        if w_type == "float-slider":
-            return FloatSlider(
-                label=w_label,
-                unit=widget_ctx.get("unit", ""),
-                min_val=widget_ctx.get("min_val", 0.0),
-                max_val=widget_ctx.get("max_val", 100.0),
-                init_val=widget_ctx.get("init_val", 0.0),
-                val_fmt=widget_ctx.get("val_fmt", "{:.3S}"),
-                min_limit=widget_ctx.get("min_limit", None),
-                min_limit_inclusive=widget_ctx.get("min_limit_inclusive", True),
-                max_limit=widget_ctx.get("max_limit", None),
-                max_limit_inclusive=widget_ctx.get("max_limit_inclusive", True),
-                orientation=parse_orientation(widget_ctx.get("orientation", "h")),
-                show_range=widget_ctx.get("show_range", True) if SLIDER_SHOW_RANGE else False,
-            )
-        if w_type == "array-slider":
-            return ArraySlider(
-                label=w_label,
-                unit=widget_ctx.get("unit", ""),
-                arr_length=widget_ctx.get("array_length", 2),
-                min_val=widget_ctx.get("min_val", 0.0),
-                max_val=widget_ctx.get("max_val", 1.0),
-                init_index=widget_ctx.get("init_index", -1),
-                val_fmt=widget_ctx.get("val_fmt", "{:.3S}"),
-                orientation=parse_orientation(widget_ctx.get("orientation", "h")),
-                show_range=widget_ctx.get("show_range", True) if SLIDER_SHOW_RANGE else False,
-            )
-        if w_type == "range-slider":
-            return FloatRangeSlider(
-                label=w_label,
-                min_val=widget_ctx.get("min_val", 0.0),
-                max_val=widget_ctx.get("max_val", 100.0),
-                init_vals=widget_ctx.get("init_vals", (1.0, 10.0)),
-                val_fmt=widget_ctx.get("val_fmt", "{:.3S}"),
-                use_margins=widget_ctx.get("use_margins", True),
-                margins=widget_ctx.get("margins", (10, 10)),
-                min_limit=widget_ctx.get("min_limit", None),
-                min_limit_inclusive=widget_ctx.get("min_limit_inclusive", True),
-                max_limit=widget_ctx.get("max_limit", None),
-                max_limit_inclusive=widget_ctx.get("max_limit_inclusive", True),
-                orientation=parse_orientation(widget_ctx.get("orientation", "h")),
-                show_range=widget_ctx.get("show_range", True) if SLIDER_SHOW_RANGE else False,
-            )
-        if w_type == "ics":
-            return InitialConditionsWidget(
-                use_theta0=widget_ctx.get("use_theta0", True),
-                init_w0=widget_ctx.get("init_w0", 1.0),
-                init_R0=widget_ctx.get("init_R0", 1.0e-8),
-                val_fmt=widget_ctx.get("val_fmt", "{:.3S}"),
-            )
-        if w_type == "pulse":
-            return PulseFunctionWidget(params_props=widget_ctx, parent=self)
-        if w_type == "step":
-            return StepFunctionWidget(params_props=widget_ctx, parent=self)
-        if w_type == "combo-box":
-            return ParameterComboBox(
-                label=w_label,
-                items=widget_ctx.get("items", []),
-                parent=self,
-            )
-        if w_type == "toggle":
-            return ParameterToggle(
-                text=widget_ctx.get("text", ""),
-                label_on=widget_ctx.get("label_on"),
-                label_off=widget_ctx.get("label_off"),
-                checked=widget_ctx.get("checked", True),
-                parent=self,
-            )
-        if w_type == "line-edit":
-            return ParameterLineEdit(
-                label=w_label,
-                init_val=widget_ctx.get("init_val", 1.0),
-                val_fmt=widget_ctx.get("val_fmt", "{:.6g}"),
-                value_is_int=widget_ctx.get("value_is_int", False),
-                unit_label=widget_ctx.get("unit_label", ""),
-                min_limit=widget_ctx.get("min_limit", None),
-                min_limit_inclusive=widget_ctx.get("min_limit_inclusive", True),
-                max_limit=widget_ctx.get("max_limit", None),
-                max_limit_inclusive=widget_ctx.get("max_limit_inclusive", True),
-                max_length=widget_ctx.get("max_length", None),
-                width_chars=widget_ctx.get("width_chars", None),
-                parent=self,
-            )
-        if w_type == "sample-props":
-            return SamplePropertiesWidget(params_props=widget_ctx, parent=self)
-
-        raise ValueError(
-            f"Unknown widget type {w_type!r}; expected 'int-slider', 'float-slider', "
-            f"'array-slider', 'range-slider', 'theta', 'cosh', 'combo-box', "
-            f"'line-edit', or 'sample-props'."
-        )
-
-    def _add_tab(self, tab_id: str, props: Dict[str, Any]) -> None:
-        """Create, populate, and append one tab page.
-
-        Args:
-            tab_id: Internal tab identifier.
-            props: Tab layout and label properties.
-        """
-
-        widgets = self._widgets_by_tabs[tab_id]
-        tab_widget = QWidget()
-        label = props.get("label", "None")
-        make_layout(props, widgets, tab_widget)
-        self.addTab(tab_widget, label)
-        self._update_tab_layout(tab_id)
-
-    def _update_tab_layout(self, tab_id: str) -> None:
-        """Align name and value widths across widgets in one tab.
-
-        Args:
-            tab_id: Internal tab identifier.
-        """
-
-        name_w = 0
-        val_w = 0
-        for w in self._widgets_by_tabs[tab_id].values():
-            n_w, v_w = w.get_name_width(), w.get_value_width()
-            name_w, val_w = max(name_w, n_w), max(val_w, v_w)
-
-        for w in self._widgets_by_tabs[tab_id].values():
-            w.set_name_width(name_w)
-            w.set_value_width(val_w)
-
-    def _on_value_changed(self, path: str, value: Any, emit_span_changed: bool = False) -> None:
-        """Cache a new widget value and emit the related signals.
-
-        Args:
-            path: Widget path identifier.
-            value: New widget value.
-            emit_span_changed: Whether to emit ``coshPeakChanged`` as well.
-        """
-
-        self._value[path] = value
-        if emit_span_changed:
-            self.spanChanged.emit(path)
-        self.valueChanged.emit(path, value)
-
-    def _on_config_changed(self, path: str, config: Dict[str, Any]) -> None:
-        """Cache a new widget configuration and emit ``configChanged``.
-
-        Args:
-            path: Widget path identifier.
-            config: Updated widget configuration mapping.
-        """
-
-        self._config[path] = config
-        self.configChanged.emit(path, config)
-
-    def _on_current_tab_changed(self, tab_idx: int) -> None:
-        """Emit cosh-related signals when the active tab changes.
-
-        Args:
-            tab_idx: New active tab index.
-        """
-
-        if tab_idx in self._tabs_with_span.keys():
-            path = self._tabs_with_span[tab_idx]
+    def _on_current_tab_changed(self, _index: int) -> None:
+        """Report the current span of the tab in front, if it has one."""
+        path = self._span_path_by_tab.get(self.current_tab())
+        if path is not None:
             self.spanChanged.emit(path)
             self.showSpan.emit(True)
         else:
             self.showSpan.emit(False)
 
-    def get_config(self) -> Dict[str, float]:
-        """Return a deep copy of the full widget-configuration mapping.
-
-        Returns:
-            Deep copy of the cached configuration mapping.
-        """
-
-        return copy.deepcopy(self._config)
-
+    # ----- values, sorted by path so saved files keep a stable order -----
     def get_value(self) -> Dict[str, Any]:
-        """Return a deep copy of the current widget-value mapping.
+        """Return all values as ``{path: value}``, sorted by path."""
+        return dict(sorted(super().get_value().items()))
 
-        Returns:
-            Deep copy of the cached value mapping.
-        """
+    def get_config(self) -> Dict[str, Dict[str, Any]]:
+        """Return all configurations as ``{path: config}``, sorted by path."""
+        return dict(sorted(super().get_config().items()))
 
-        return copy.deepcopy(self._value)
-
-    def get_widget(self, path: str) -> ParameterWidgetBase:
-        """Return the widget registered under a given path.
-
-        Args:
-            path: Widget path identifier.
-
-        Returns:
-            Registered widget instance.
-        """
-
-        return self._widgets_by_path[path]
-
-    def set_value(self, value: Dict[str, Any]) -> None:
-        """Apply a value mapping to all matching widgets without emitting signals.
+    # ----- MB-specific -----
+    def set_fit_tab_enable(self, enabled: bool) -> None:
+        """Enable or disable the contents of the Fit tab (the tab stays selectable).
 
         Args:
-            value: Mapping from widget paths to new values.
+            enabled: Whether the Fit tab's widgets are enabled.
         """
-
-        self.blockSignals(True)
-        try:
-            for p, w in self._widgets_by_path.items():
-                if p in value.keys():
-                    w.set_value(value[p])
-                    self._value[p] = w.get_value()
-        finally:
-            self.blockSignals(False)
-
-    def set_config(self, config: Dict[str, Any]) -> None:
-        """Apply a configuration mapping to all matching widgets silently.
-
-        Args:
-            config: Mapping from widget paths to configuration dictionaries.
-        """
-
-        self.blockSignals(True)
-        try:
-            for p, w in self._widgets_by_path.items():
-                if p in config.keys():
-                    w.set_config(config[p])
-                    self._config[p] = w.get_config()
-        finally:
-            self.blockSignals(False)
-
-    def show_widget(self, path: str, show: bool) -> None:
-        """Show or hide the widget registered under a path.
-
-        Args:
-            path: Widget path identifier.
-            show: Whether the widget should be shown.
-        """
-
-        w = self._widgets_by_path[path]
-        if show:
-            w.show()
-        else:
-            w.hide()
-
-    def set_fit_tab_enable(self, visible: bool) -> None:
-        """Enable or disable the fit-tab page.
-
-        Args:
-            visible: Whether the fit tab should be enabled.
-        """
-
-        if self._fit_tab_index is None:
-            return
-
-        page = self.widget(self._fit_tab_index)
-        if page is not None:
-            page.setEnabled(visible)
+        if "fit" in self.tab_ids():
+            self.page("fit").setEnabled(enabled)
 
     def show_scaling_formula(self) -> None:
-        """Open the scaling-formula dialog via the sample-properties widget."""
-
-        self._widgets_by_path["solve.sample"].show_formula()
+        """Open the scaling-formula dialog of the sample-properties widget."""
+        self.get_widget("solve.sample").show_formula()
 
 
 def _demo_main() -> int:
-    """Run the parameter-tabs widget as a standalone demo.
+    """Run the parameter tabs on their own: ``python -m app.parameter_tabs``.
 
     Returns:
         Qt application exit code.
@@ -408,24 +127,18 @@ def _demo_main() -> int:
     from utils.helper_funcs import read_json
 
     class MainWindow(QMainWindow):
-        """Demo main window for the parameter-tabs widget."""
+        """Demo main window for the parameter tabs."""
 
         def __init__(self):
-            """Initialize the demo window and its menu/controller wiring."""
+            """Initialize the demo window and its menu."""
 
             super().__init__()
-            self._solve_counter = 0
-            self._plot_counter = 0
-
             self.value_label = QLabel("value:")
             self.config_label = QLabel("config:")
 
-            def_cfgs = read_json(SETTINGS_FILE_PATH)
-            params_tabs = def_cfgs["tabs"]
-            params_tabs = ParameterTabsWidget(params_tabs)
-            params_tabs.valueChanged.connect(self._on_value_changed)
-            params_tabs.configChanged.connect(self._on_config_changed)
-            self._params_tabs = params_tabs
+            self._params_tabs = ParameterTabsWidget(read_json(SETTINGS_FILE_PATH)["panel"])
+            self._params_tabs.valueChanged.connect(self._on_value_changed)
+            self._params_tabs.configChanged.connect(self._on_config_changed)
 
             self._menu_ctrl = MenuBarController(
                 window=self,
@@ -440,13 +153,7 @@ def _demo_main() -> int:
                 },
                 native_menubar=False,
             )
-
             self._menu_ctrl.actionTriggered.connect(self._on_menubar_clicked)
-
-            self._make_layout()
-
-        def _make_layout(self):
-            """Create the demo-window layout."""
 
             central = QWidget(self)
             self.setCentralWidget(central)
@@ -458,62 +165,34 @@ def _demo_main() -> int:
             m_l.addWidget(self._params_tabs, 0)
 
         def _on_menubar_clicked(self, menu_id: str, act_id: str, checked: bool) -> None:
-            """Handle menu-bar actions in the demo.
-
-            Args:
-                menu_id: Identifier of the clicked menu.
-                act_id: Identifier of the clicked action.
-                checked: Checked state associated with the action.
-            """
-
+            """Handle menu-bar actions in the demo."""
             if act_id == "save_parameters":
-                self._on_save()
+                text = pretty_json({
+                    "params": self._params_tabs.get_value(),
+                    "configs": self._params_tabs.get_config(),
+                })
+                Path("parameters.json").write_text(text, encoding="utf-8")
+                print("Parameters saved")
             elif act_id == "show_scaling_formula":
                 self._params_tabs.show_scaling_formula()
             elif act_id == "show_fit_tab":
                 self._params_tabs.set_fit_tab_enable(checked)
 
         def _on_value_changed(self, path: str, value: Any) -> None:
-            """Update the value label after a widget value changes.
+            """Show the last changed value."""
+            text = value if isinstance(value, (int, float, bool)) else pretty_json(value)
+            self.value_label.setText(f"{path}: {text}")
 
-            Args:
-                path: Widget path identifier.
-                value: New widget value.
-            """
-
-            if isinstance(value, (int | float | bool)):
-                self.value_label.setText(f"{path}: {value}")
-            else:
-                val_text = pretty_json(value)
-                self.value_label.setText(f"{path}: {val_text}")
-
-        def _on_config_changed(self, path: str, config: Dict[str, Any]):
-            """Update the config label after a widget configuration changes.
-
-            Args:
-                path: Widget path identifier.
-                config: Updated configuration mapping.
-            """
-
-            config_text = pretty_json(config)
-            self.config_label.setText(f"{path}: {config_text}")
-
-        def _on_save(self):
-            """Save current parameters and configurations to a JSON file."""
-
-            text = pretty_json({
-                "params": self._params_tabs.get_value(),
-                "configs": self._params_tabs.get_config(),
-            })
-            Path("parameters.json").write_text(text, encoding="utf-8")
-            print("Parameters saved")
+        def _on_config_changed(self, path: str, config: Dict[str, Any]) -> None:
+            """Show the last changed configuration."""
+            self.config_label.setText(f"{path}: {pretty_json(config)}")
 
     app = QApplication(sys.argv)
     set_app_style(app)
 
     win = MainWindow()
-    win.setWindowTitle("QTabWidget Sliders")
-    win.resize(1000, 200)
+    win.setWindowTitle("Parameter tabs")
+    win.resize(1000, 600)
     set_win_center(win, app)
     win.show()
     return app.exec()

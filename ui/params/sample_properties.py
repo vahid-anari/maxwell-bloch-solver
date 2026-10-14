@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
 
@@ -18,8 +18,9 @@ class SamplePropertiesWidget(ParameterWidgetBase):
 
     def __init__(
         self,
-        params_props: Dict[str, Any],
+        params_props: Optional[Dict[str, Any]] = None,
         parent: QWidget | None = None,
+        **props: Any,
     ):
         """Initialize the sample-properties widget.
 
@@ -27,9 +28,13 @@ class SamplePropertiesWidget(ParameterWidgetBase):
             params_props: Mapping that describes the editable sample-property
                 widgets and layout configuration.
             parent: Optional parent widget.
+            **props: The same properties as keyword arguments, as the
+                parameter panel passes them; merged into ``params_props``.
         """
 
         super().__init__(parent)
+        params_props = {**(params_props or {}), **props}
+
         self._widgets: Dict[str, ParameterWidgetBase] = {}
         self._unit_to_si_factors: Dict[str, float] = {}
         self._params_id = ["nu", "gamma", "t0", "l", "n0"]
@@ -216,7 +221,8 @@ def _demo_main() -> int:
     win.setWindowTitle("Input Parameters Demo")
 
     def_cfgs = read_json(SETTINGS_FILE_PATH)
-    params_props = def_cfgs["tabs"]["sample"]["widgets"]["sample_props"]
+    sample_tab = next(t for t in def_cfgs["panel"]["tabs"] if t["id"] == "sample")
+    params_props = sample_tab["layout"]["column"][0]
 
     sp = SamplePropertiesWidget(
         params_props=params_props,
