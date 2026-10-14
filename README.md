@@ -4,7 +4,7 @@ A PySide6 desktop application for simulating, visualizing, and fitting one-dimen
 
 ## Screenshot
 
-<img src="assets/main_window.png" width="1512" alt="Maxwell Bloch Solver main window">
+<img src="https://raw.githubusercontent.com/vahid-anari/maxwell-bloch-solver/main/assets/main_window.png" width="1512" alt="Maxwell Bloch Solver main window">
 
 ## Features
 
@@ -19,67 +19,39 @@ A PySide6 desktop application for simulating, visualizing, and fitting one-dimen
 - Export to PDF, PNG, or SVG, with PDF exports including metadata and parameter reports.
 - Local user guide and equations reference.
 
-## Repository structure
-
-```text
-.
-├── main.py                    # Application entry point
-├── app/                       # Main window, plotting, solver controller, update pipeline
-├── app_io/                    # Data and parameter import/export helpers
-├── ui/                        # Physics parameter panels, splash screen
-├── dialogs/                   # Application dialogs
-├── settings/                  # App metadata, style, defaults, and settings JSON
-├── utils/                     # Units, constants, helper functions, solver-step viewer
-├── assets/                    # App icons/images
-└── docs/                      # User guide and equations reference
-```
-
 ## Installation
 
-This project requires Python 3.10 or newer. Python 3.11 or 3.12 is recommended.
-
-Clone the repository and create a virtual environment:
+The app needs Python 3.10 or newer. The easiest way is [pipx](https://pipx.pypa.io),
+which installs the app in its own environment and puts the command on your path:
 
 ```bash
-git clone https://github.com/vahid-anari/maxwell-bloch-solver.git
-cd maxwell-bloch-solver
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
+pipx install maxwell-bloch-solver
 ```
 
-Install the dependencies:
+If you work in a conda or virtual environment, install it there with pip instead:
 
 ```bash
-pip install -r requirements.txt
-```
-
-If you do not use `requirements.txt`, install the main packages manually:
-
-```bash
-pip install PySide6 numpy matplotlib psutil pygments sciwidgets maxbloch
+pip install maxwell-bloch-solver
 ```
 
 ## Running the application
 
-From the repository root, run:
-
 ```bash
-python main.py
+maxwell-bloch-solver
 ```
 
-The application opens the Maxwell Bloch Solver GUI. Use the menu bar to load data folders, adjust parameters, run/refresh the solver, and export plots.
+(`mbsolver` is a shorter name for the same command, and `python -m mbsolver` works too.)
+Use the menu bar to load data folders, adjust parameters, run the solver and export plots.
 
 ## Updating
 
-The app tells you when a new version is available. To update a cloned repository:
+The app tells you when a new version is available. To update:
 
 ```bash
-git pull
-pip install -r requirements.txt
+pipx upgrade maxwell-bloch-solver
 ```
 
-If you downloaded a zip, download the new one, replace the folder, and run the same `pip install` line.
+or `pip install -U maxwell-bloch-solver` in the environment where you installed it.
 
 ## Input data format
 
@@ -125,24 +97,35 @@ PDF exports include the plot plus a report page containing metadata and the curr
 
 ## Documentation
 
-The `docs/` folder contains:
+The user guide and the equations reference (PDF) are installed with the app;
+open them from the Help and Info menus.
 
-- `user_guide.pdf` — user-facing guide for the application,
-- `equations_reference.pdf` — mathematical reference for the model equations.
+## Development
 
-Both can also be opened from the application's Help and Info menus.
+```bash
+git clone https://github.com/vahid-anari/maxwell-bloch-solver.git
+cd maxwell-bloch-solver
+pip install -e .
+mbsolver
+```
 
-## Development notes
+`python main.py` in the repository root also starts the app from the source
+folder. The code lives in `src/mbsolver/`:
 
-Before committing to GitHub, avoid adding generated or local-only files such as:
+```text
+src/mbsolver/
+├── main.py           # application entry point
+├── app/              # main window, plotting, solver controller, update pipeline
+├── ui/               # physics parameter widgets, dialogs, splash screen, step viewer
+├── io/               # data and parameter import/export
+├── config/           # app metadata, style and UI defaults
+├── utils/            # units, constants, helper functions
+└── resources/        # settings.json, icons, user guide and equations PDFs
+```
 
-- `__pycache__/`
-- `.DS_Store`
-- `.idea/`
-- `.venv/`
-
-The included `.gitignore` is set up to exclude most of these files.
+The numerical solver is the [maxbloch](https://github.com/vahid-anari/maxbloch)
+package; the widgets come from [sciwidgets](https://github.com/vahid-anari/sciwidgets).
 
 ## License
 
-This project is released under the MIT License. See [`LICENSE`](LICENSE) for details.
+This project is released under the MIT License. See [`LICENSE`](https://github.com/vahid-anari/maxwell-bloch-solver/blob/main/LICENSE) for details.

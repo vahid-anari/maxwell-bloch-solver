@@ -1,3 +1,5 @@
+# Dependencies for running from a source folder (python main.py).
+# Installed users get them automatically: pipx install maxwell-bloch-solver
 PySide6
 numpy
 matplotlib
