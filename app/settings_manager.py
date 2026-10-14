@@ -74,7 +74,6 @@ class Settings:
         organization: str,
         application: str,
         canvas: "PlotCanvas",
-        default_lines_config: Dict[str, Any],
     ) -> None:
         """Initialize the settings container.
 
@@ -82,14 +81,12 @@ class Settings:
             organization: QSettings organization string.
             application: QSettings application string.
             canvas: Plot canvas whose line colors are managed.
-            default_lines_config: Factory-default line-configuration mapping.
         """
         self._settings = QSettings(organization, application)
         self.recent_folders = RecentFoldersManager(self._settings)
         self.line_colors = LineColorManager(
             canvas=canvas,
             settings=self._settings,
-            default_lines_config=default_lines_config,
         )
 
     def _serialize_for_settings(self, obj: Any) -> str:
@@ -198,18 +195,15 @@ class LineColorManager:
         self,
         canvas: "PlotCanvas",
         settings: "QSettings",
-        default_lines_config: Dict[str, Any],
     ) -> None:
         """Initialize the line-color manager.
 
         Args:
             canvas: Plot canvas whose curve colors are managed.
             settings: Application QSettings instance.
-            default_lines_config: Factory-default line-configuration mapping.
         """
         self._canvas = canvas
         self._settings = settings
-        self._default_lines_config = default_lines_config
 
     def apply_saved_colors(self) -> None:
         """Apply persisted colors to the canvas and redraw it."""
@@ -298,9 +292,7 @@ class LineColorManager:
             {"id": f"{LINE_COLOR_ACTION_PREFIX}w", "text": "w..."},
             {"id": "sep"},
         ]
-        profiles = self._default_lines_config.get("bottom_panel", {}).get("left", {})
-        for name, props in profiles.items():
-            text = props.get("combo_label") or props.get("label") or name
+        for name, text in self._canvas.get_profile_combo_labels().items():
             items.append({"id": f"{LINE_COLOR_ACTION_PREFIX}{name}", "text": f"{text}..."})
 
         items.append({"id": "sep"})
@@ -323,19 +315,12 @@ class LineColorManager:
         return QIcon(pix)
 
     def _get_default_colors(self) -> Dict[str, str]:
-        """Extract factory-default curve colors from the line config.
+        """Return the factory-default curve colors (from the plot settings).
 
         Returns:
             Mapping from curve identifiers to default colors.
         """
-        out: Dict[str, str] = {}
-        for panel in self._default_lines_config.values():
-            for side in panel.values():
-                for name, item in side.items():
-                    color = item.get("props", {}).get("color")
-                    if color:
-                        out[name] = str(color)
-        return out
+        return self._canvas.default_curve_colors()
 
     def _settings_key(self, curve_id: str) -> str:
         """Return the QSettings key for a curve color.

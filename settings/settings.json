@@ -1,9 +1,6 @@
 {
-  "figure": {
-    "main": {
-      "nrows": 2,
-      "ncols": 1,
-      "sharex": true,
+  "plot": {
+    "figure": {
       "figsize": [
         14.52,
         4.23
@@ -11,147 +8,180 @@
       "dpi": 100,
       "facecolor": "floralwhite",
       "edgecolor": "k",
-      "gridspec_kw": {
-        "height_ratios": [
-          5,
-          2
-        ],
-        "hspace": 0.15
+      "margins": {
+        "left": 0.06,
+        "right": 0.94,
+        "bottom": 0.15,
+        "top": 0.94
       }
     },
-    "science_style": false,
-    "margin": {
-      "left": 0.06,
-      "right": 0.94,
-      "bottom": 0.15,
-      "top": 0.94
-    }
-  },
-  "axes": {
-    "zero_h_line": {
-      "color": "k",
-      "linestyle": "--",
-      "linewidth": 0.75
+    "layout": {
+      "mosaic": [
+        [
+          "top"
+        ],
+        [
+          "bottom"
+        ]
+      ],
+      "height_ratios": [
+        5,
+        2
+      ],
+      "hspace": 0.15,
+      "sharex": true
     },
-    "current_span": {
-      "line": {
-        "color": "r",
-        "linestyle": "-",
+    "axes_style": {
+      "zero_line": {
+        "color": "k",
+        "linestyle": "--",
         "linewidth": 0.75,
         "alpha": 0.6
       },
+      "label_font": {
+        "fontsize": 13,
+        "fontname": "Times New Roman"
+      },
+      "offset_font": {
+        "fontsize": 10,
+        "fontname": "Times New Roman"
+      },
+      "ticks": {
+        "direction": "in",
+        "labelsize": 11,
+        "labelfontfamily": "Times New Roman",
+        "left": true,
+        "right": false,
+        "top": true,
+        "bottom": true
+      },
+      "ticks_major": {
+        "length": 3.5,
+        "width": 0.7
+      },
+      "ticks_minor": {
+        "length": 1.75,
+        "width": 0.5
+      },
+      "minor_locator": [
+        4,
+        4
+      ],
+      "ticks_x": {
+        "pad": 5
+      },
+      "label_pad": [
+        null,
+        5
+      ]
+    },
+    "markers": {
       "span": {
-        "color": "b",
-        "alpha": 0.1
-      }
-    },
-    "label_font": {
-      "fontsize": 13,
-      "fontname": "Times New Roman"
-    },
-    "axis_offset_font": {
-      "fontsize": 10,
-      "fontname": "Times New Roman"
-    },
-    "ticks": {
-      "axis": "both",
-      "direction": "in",
-      "labelsize": 11,
-      "labelfontfamily": "Times New Roman",
-      "left": true,
-      "right": true,
-      "top": true,
-      "bottom": true
-    },
-    "ticks_major": {
-      "which": "major",
-      "length": 3.5,
-      "width": 0.7
-    },
-    "ticks_minor": {
-      "which": "minor",
-      "length": 1.75,
-      "width": 0.5
-    },
-    "xaxis_minor_locator": 4,
-    "yaxis_minor_locator": 4
-  },
-  "lines": {
-    "top_panel": {
-      "left": {
-        "data_points": {
-          "label": "",
-          "unit": "",
-          "props": {
-            "linestyle": "",
-            "marker": "o",
-            "markersize": 3,
-            "color": "k"
-          }
-        },
-        "flux": {
-          "label": "F",
-          "unit": "\\mathrm{Jy}",
-          "props": {
-            "color": "b",
-            "linestyle": "-",
-            "linewidth": 1.25
-          }
+        "kind": "vspan",
+        "visible": false,
+        "props": {
+          "color": "b",
+          "alpha": 0.1
+        }
+      },
+      "span_center": {
+        "kind": "vline",
+        "visible": false,
+        "props": {
+          "color": "r",
+          "linestyle": "-",
+          "linewidth": 0.75,
+          "alpha": 0.6
         }
       }
     },
-    "bottom_panel": {
-      "left": {
-        "lambda_n": {
-          "label": "\\Lambda_n",
-          "unit": "\\Lambda_0",
-          "combo_label": "Λₙ",
-          "props": {
-            "color": "cyan",
-            "linestyle": "-",
-            "linewidth": 1.25
-          }
-        },
-        "A0": {
-          "label": "A\\vert_{z=0}",
-          "unit": "A_0",
-          "combo_label": "A|z=0",
-          "props": {
-            "color": "orange",
-            "linestyle": "-",
-            "linewidth": 1.25
-          }
-        },
-        "t1": {
-          "label": "T_1",
-          "unit": "T_0",
-          "combo_label": "T₁",
-          "props": {
-            "color": "forestgreen",
-            "linestyle": "-",
-            "linewidth": 1.25
-          }
-        },
-        "t2": {
-          "label": "T_2",
-          "unit": "T_0",
-          "combo_label": "T₂",
-          "props": {
-            "color": "yellowgreen",
-            "linestyle": "-",
-            "linewidth": 1.25
+    "panels": {
+      "top": {
+        "primary": "flux",
+        "curves": {
+          "data_points": {
+            "label": "",
+            "unit": "",
+            "props": {
+              "linestyle": "",
+              "marker": "o",
+              "markersize": 3,
+              "color": "k"
+            },
+            "name": "Data Points"
+          },
+          "flux": {
+            "label": "F",
+            "unit": "\\mathrm{Jy}",
+            "props": {
+              "color": "b",
+              "linestyle": "-",
+              "linewidth": 1.25
+            },
+            "name": "Flux"
           }
         }
       },
-      "right": {
-        "w": {
-          "label": "w",
-          "unit": "-",
-          "props": {
-            "color": "magenta",
-            "linestyle": "-",
-            "linewidth": 1.25,
-            "zorder": 3
+      "bottom": {
+        "select": "one",
+        "curves": {
+          "lambda_n": {
+            "label": "\\Lambda_n",
+            "unit": "\\Lambda_0",
+            "name": "Λₙ",
+            "props": {
+              "color": "cyan",
+              "linestyle": "-",
+              "linewidth": 1.25
+            }
+          },
+          "A0": {
+            "label": "A\\vert_{z=0}",
+            "unit": "A_0",
+            "name": "A|z=0",
+            "props": {
+              "color": "orange",
+              "linestyle": "-",
+              "linewidth": 1.25
+            }
+          },
+          "t1": {
+            "label": "T_1",
+            "unit": "T_0",
+            "name": "T₁",
+            "props": {
+              "color": "forestgreen",
+              "linestyle": "-",
+              "linewidth": 1.25
+            }
+          },
+          "t2": {
+            "label": "T_2",
+            "unit": "T_0",
+            "name": "T₂",
+            "props": {
+              "color": "yellowgreen",
+              "linestyle": "-",
+              "linewidth": 1.25
+            }
+          }
+        },
+        "twin": {
+          "primary": "w",
+          "grid": {
+            "linestyle": ":"
+          },
+          "curves": {
+            "w": {
+              "label": "w",
+              "unit": "-",
+              "props": {
+                "color": "magenta",
+                "linestyle": "-",
+                "linewidth": 1.25,
+                "zorder": 3
+              }
+            }
           }
         }
       }

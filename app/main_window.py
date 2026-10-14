@@ -196,19 +196,13 @@ class MBESolverApp(QMainWindow):
         # ---- build primary widgets ----
         self._velocity_bar = VelocityBarController(window=self)
         self._parameter_tabs = ParameterTabsWidget(default_config["panel"])
-        self._canvas = PlotCanvas(
-            figure_props=default_config["figure"],
-            axes_props=default_config["axes"],
-            lines_props=default_config["lines"],
-            t_limits=(0.0, 100.0),
-        )
+        self._canvas = PlotCanvas(default_config["plot"])
 
         # ---- coordinator objects ----
         self._settings = Settings(
             organization="VahidAnari",
             application="MaxwellBlochSolver",
             canvas=self._canvas,
-            default_lines_config=default_config["lines"],
         )
 
         self._solver = SolverController(
