@@ -705,12 +705,14 @@ class MBESolverApp(QMainWindow):
         """
         folder_info = analyze_folder(folder_path, self)
         if folder_info is None:
+            self._status_bar.set_state(StatusState.READY)
             return
 
         selected_period = None
         if folder_info.has_periods:
             selected_period = select_period_if_needed(folder_info, self)
             if selected_period is None:
+                self._status_bar.set_state(StatusState.READY)
                 return
 
         show_data_folder_summary(folder_info=folder_info, selected_period=selected_period, parent=self)
@@ -736,6 +738,7 @@ class MBESolverApp(QMainWindow):
         else:
             self._all_params = {}
 
+        self._status_bar.set_state(StatusState.READY)
         self._set_fit_mode(True)
         self._velocity_bar.set_available_velocities(
             list(self._all_data.keys()),
@@ -754,9 +757,10 @@ class MBESolverApp(QMainWindow):
             self._status_bar.set_state(StatusState.READY)
             return
         folder_path = select_folder(self)
-        if folder_path is not None:
-            self._load_data_folder_from_path(folder_path)
-        self._status_bar.set_state(StatusState.READY)
+        if folder_path is None:
+            self._status_bar.set_state(StatusState.READY)
+            return
+        self._load_data_folder_from_path(folder_path)
 
     def _open_recent_data_folder(self, folder_path: str) -> None:
         """Open one folder from the recent-data-folder history.
@@ -776,7 +780,6 @@ class MBESolverApp(QMainWindow):
             self._status_bar.set_state(StatusState.READY)
             return
         self._load_data_folder_from_path(path)
-        self._status_bar.set_state(StatusState.READY)
 
     def _clear_recent_data_folders(self) -> None:
         """Clear the recent-data-folder history and rebuild the menu."""
@@ -813,10 +816,10 @@ class MBESolverApp(QMainWindow):
         self._set_params_path(path)
         self._parameter_tabs.set_config(params["config"])
         self._parameter_tabs.set_value(params["params"])
+        self._status_bar.set_state(StatusState.READY)
         self._pipeline.tasks.set_all()
         self._solver.solve()
 
-        self._status_bar.set_state(StatusState.READY)
         show_information("Parameters Imported", "Parameters were imported successfully.", parent=self)
 
     def _close_data(self) -> None:
