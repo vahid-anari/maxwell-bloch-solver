@@ -4,7 +4,7 @@ A PySide6 desktop application for simulating, visualizing, and fitting one-dimen
 
 ## Screenshot
 
-<img src="assets/main_window.png" width="900" alt="Maxwell Bloch Solver main window">
+<img src="assets/main_window.png" width="1512" alt="Maxwell Bloch Solver main window">
 
 ## Features
 
