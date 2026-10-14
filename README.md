@@ -4,19 +4,20 @@ A PySide6 desktop application for simulating, visualizing, and fitting one-dimen
 
 ## Screenshot
 
-![Maxwell Bloch Solver](assets/screenshot.png)
+<img src="assets/main_window.png" width="900" alt="Maxwell Bloch Solver main window">
 
 ## Features
 
 - Interactive GUI for Maxwell-Bloch model configuration and visualization.
 - Numba-accelerated numerical solver using Runge-Kutta time stepping, from the [maxbloch](https://github.com/vahid-anari/maxbloch) package.
+- Interface built with [sciwidgets](https://github.com/vahid-anari/sciwidgets) (sliders, parameter panels, plot canvas).
 - Light-curve import from velocity-tagged text files.
 - Support for period-tagged source folders, e.g. multiple folded periods for the same source.
 - Adjustable source, sample, initial-condition, pump-profile, and plotting parameters.
 - Built-in visualization of fitted flux, inversion/population, pump terms, and other solver quantities.
 - Parameter saving/loading using JSON files.
 - Export to PDF, PNG, or SVG, with PDF exports including metadata and parameter reports.
-- Local user guide, equations reference, and generated API documentation.
+- Local user guide and equations reference.
 
 ## Repository structure
 
@@ -25,12 +26,12 @@ A PySide6 desktop application for simulating, visualizing, and fitting one-dimen
 ├── main.py                    # Application entry point
 ├── app/                       # Main window, plotting, solver controller, update pipeline
 ├── app_io/                    # Data and parameter import/export helpers
-├── ui/                        # Qt widgets, sliders, labels, menus, status bar
+├── ui/                        # Physics parameter panels, splash screen
 ├── dialogs/                   # Application dialogs
 ├── settings/                  # App metadata, style, defaults, and settings JSON
 ├── utils/                     # Units, constants, helper functions, solver-step viewer
 ├── assets/                    # App icons/images
-└── docs/                      # User guide, equations reference, and API documentation
+└── docs/                      # User guide and equations reference
 ```
 
 ## Installation
@@ -68,6 +69,17 @@ python main.py
 ```
 
 The application opens the Maxwell Bloch Solver GUI. Use the menu bar to load data folders, adjust parameters, run/refresh the solver, and export plots.
+
+## Updating
+
+The app tells you when a new version is available. To update a cloned repository:
+
+```bash
+git pull
+pip install -r requirements.txt
+```
+
+If you downloaded a zip, download the new one, replace the folder, and run the same `pip install` line.
 
 ## Input data format
 
@@ -116,10 +128,9 @@ PDF exports include the plot plus a report page containing metadata and the curr
 The `docs/` folder contains:
 
 - `user_guide.pdf` — user-facing guide for the application,
-- `equations_reference.pdf` — mathematical reference for the model equations,
-- `docs/api/index.html` — generated API documentation.
+- `equations_reference.pdf` — mathematical reference for the model equations.
 
-These can also be opened from the application through the Help/Info menus.
+Both can also be opened from the application's Help and Info menus.
 
 ## Development notes
 
@@ -129,7 +140,6 @@ Before committing to GitHub, avoid adding generated or local-only files such as:
 - `.DS_Store`
 - `.idea/`
 - `.venv/`
-- Numba cache files such as `*.nbc` and `*.nbi`
 
 The included `.gitignore` is set up to exclude most of these files.
 
