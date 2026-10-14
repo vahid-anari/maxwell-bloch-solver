@@ -53,7 +53,6 @@ class PlotExporter:
             get_displayed_curves: Callable[[], "DisplayedCurves"],
             get_params: Callable[[], dict[str, Any]],
             get_fit_mode: Callable[[], bool],
-            get_view_preference: Callable[[str, bool], bool],
             get_metadata: Callable[[], dict[str, Any]],
             get_parameter_tabs_value: Callable[[], dict[str, Any]],
     ) -> None:
@@ -64,7 +63,6 @@ class PlotExporter:
             get_displayed_curves: Callable returning the current displayed-curves snapshot.
             get_params: Callable returning the current parameter mapping.
             get_fit_mode: Callable returning whether fit mode is active.
-            get_view_preference: Callable used to query persisted grid preferences.
             get_metadata: Callable returning export metadata.
             get_parameter_tabs_value: Callable returning current parameter-tab values.
         """
@@ -72,7 +70,6 @@ class PlotExporter:
         self._get_displayed_curves = get_displayed_curves
         self._get_params = get_params
         self._get_fit_mode = get_fit_mode
-        self._get_view_preference = get_view_preference
         self._get_metadata = get_metadata
         self._get_parameter_tabs_value = get_parameter_tabs_value
 
@@ -362,22 +359,27 @@ class PlotExporter:
             title = title.replace("_", r"\_").replace("%", r"\%")
         return title
 
+    _GRID_AXIS = {"flux": "top", "w": "bottom.twin", "bottom": "bottom"}
+    """Live-canvas panel whose y grid each export panel copies."""
+
     def _style_axis(self, ax: plt.Axes, zero_line, color: str, y_prefix: str, dotted: bool = False) -> None:
-        """Colour the zero line and apply saved grids, matching the live canvas.
+        """Colour the zero line and apply the live canvas' grids.
 
         Args:
             ax: Target axis.
-            zero_line: Zero line returned by ``add_ax_props``.
+            zero_line: Zero line returned by ``style_axes``.
             color: Colour of the panel's curve.
-            y_prefix: Preference prefix for the y grid (``"flux"``, ``"w"`` or ``"bottom"``).
+            y_prefix: Which canvas grid to copy (``"flux"``, ``"w"`` or ``"bottom"``).
             dotted: Whether the y grid is dotted (used for w).
         """
         zero_line.set_color(color)
         zero_line.set_alpha(0.6)
-        pref = self._get_view_preference
+        grids = self._canvas.get_config().get("axes", {})
+        time_grid = grids.get("top", {})
+        y_grid = grids.get(self._GRID_AXIS[y_prefix], {})
         for which in ("major", "minor"):
-            ax.grid(pref(f"show_time_{which}_grid", False), which=which, axis="x")
-            if pref(f"show_{y_prefix}_{which}_grid", False):
+            ax.grid(bool(time_grid.get(f"x_{which}")), which=which, axis="x")
+            if y_grid.get(f"y_{which}"):
                 ax.grid(True, which=which, axis="y", color=color, alpha=0.3,
                         linestyle=":" if dotted else "-")
             else:
@@ -442,7 +444,7 @@ class PlotCanvas(_SciPlotCanvas):
             description: The ``"plot"`` section of the settings file.
             parent: Optional Qt parent widget.
         """
-        super().__init__(description, parent, usetex=USE_LATEX, context_menu=False)
+        super().__init__(description, parent, usetex=USE_LATEX)
         self.setMinimumWidth(700)
         self.setMinimumHeight(350)
 

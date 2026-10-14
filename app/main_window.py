@@ -19,11 +19,11 @@ from html import escape
 from pathlib import Path
 from typing import Any, Dict, Optional
 import numpy as np
-from PySide6.QtCore import QSize, Qt, QUrl, QTimer
+from PySide6.QtCore import Qt, QUrl, QTimer
 from PySide6.QtGui import QCloseEvent, QDesktopServices, QAction, QKeySequence
 from PySide6.QtWidgets import (
-    QApplication, QComboBox, QFileDialog, QHBoxLayout, QLabel, QMainWindow, QVBoxLayout,
-    QWidget, QCheckBox
+    QApplication, QFileDialog, QHBoxLayout, QLabel, QMainWindow, QVBoxLayout,
+    QWidget
 )
 
 show_splash_message("Importing config packages / parameters tabs...")
@@ -33,12 +33,7 @@ show_splash_message("Importing config packages / plot...")
 from app.plot import PlotCanvas, PlotExporter
 
 show_splash_message("Importing config packages / settings manager...")
-from app.settings_manager import (
-    LINE_COLOR_ACTION_PREFIX,
-    RESET_LINE_COLORS_ACTION_ID,
-    LineColorManager,
-    Settings,
-)
+from app.settings_manager import Settings
 
 show_splash_message("Importing config packages / solver...")
 from app.solver_controller import SolverController
@@ -99,6 +94,7 @@ from settings.ui_defaults import NATIVE_MENU_BAR
 show_splash_message("Importing config packages / menu bar...")
 show_splash_message("Importing config packages / status bar...")
 from enum import Enum
+from sciwidgets.plot import CurveCheckBox, CurveSelector
 from sciwidgets.window import MenuBarController, StatusBarController
 
 show_splash_message("Importing config packages / helper functions...")
@@ -120,14 +116,6 @@ class StatusState(str, Enum):
     ERROR = "Error"
 
 MENU_CHECKABLE_IDS = (
-    "show_time_major_grid",
-    "show_time_minor_grid",
-    "show_flux_major_grid",
-    "show_flux_minor_grid",
-    "show_w_major_grid",
-    "show_w_minor_grid",
-    "show_bottom_major_grid",
-    "show_bottom_minor_grid",
     "show_slider_range_labels",
 )
 """Action IDs whose checked states are persisted across sessions."""
@@ -202,7 +190,6 @@ class MBESolverApp(QMainWindow):
         self._settings = Settings(
             organization="VahidAnari",
             application="MaxwellBlochSolver",
-            canvas=self._canvas,
         )
 
         self._solver = SolverController(
@@ -230,7 +217,6 @@ class MBESolverApp(QMainWindow):
             get_displayed_curves=lambda: self._pipeline.displayed_curves,
             get_params=self._parameter_tabs.get_value,
             get_fit_mode=lambda: self._fit_mode,
-            get_view_preference=self._settings.get_view_preference,
             get_metadata=lambda: self._get_metadata_text(add_velocity=True),
             get_parameter_tabs_value=self._parameter_tabs.get_value,
         )
@@ -244,7 +230,7 @@ class MBESolverApp(QMainWindow):
         self._status_bar = StatusBarController(self, states=list(StatusState))
 
         # ---- bottom panel selector ----
-        self._bottom_plot_combo = self._make_curve_selector(self._canvas.get_profile_combo_labels())
+        self._bottom_plot_combo = self._make_curve_selector()
         self._bottom_plot = self._bottom_plot_combo.currentData()
 
         # ---- connect signals ----
@@ -260,6 +246,7 @@ class MBESolverApp(QMainWindow):
         self._update_checker.updateAvailable.connect(self._on_update_available)
         self._update_checker.upToDate.connect(self._on_up_to_date)
         self._update_checker.checkFailed.connect(self._on_update_check_failed)
+        self._canvas.configChanged.connect(self._settings.save_plot_config)
 
         self._factory_default_config = self._parameter_tabs.get_config()
         self._factory_default_params = self._parameter_tabs.get_value()
@@ -268,10 +255,8 @@ class MBESolverApp(QMainWindow):
         self._status_bar.set_state(StatusState.READY)
         self._set_fit_mode(False)
         self._make_layout()
+        self._canvas.set_config(self._settings.load_plot_config())
         self._apply_saved_view_preferences()
-        self._settings.line_colors.apply_saved_colors()
-        self._settings.line_colors.update_all_menu_icons(self._menu_bar)
-        self._update_bottom_plot_combo_icons()
         self._pipeline.tasks.set_all()
         self._status_bar.set_modified()
         self._on_bottom_plot_changed()
@@ -287,29 +272,17 @@ class MBESolverApp(QMainWindow):
         layout.addWidget(self._canvas, 1)
         layout.addWidget(self._parameter_tabs, 0)
 
-    def _make_curve_selector(self, items: dict[str, str]) -> QComboBox:
+    def _make_curve_selector(self) -> CurveSelector:
         """Create the bottom-panel selector and w toggle, and add them to the toolbar.
 
-        Args:
-            items: Mapping from internal curve IDs to display labels.
+        Both show the curves' colours and follow colour changes made in the
+        plot's right-click menu.
 
         Returns:
-            Configured combo box used to select the active bottom-panel profile.
+            Combo box used to select the active bottom-panel profile.
         """
-        combo = QComboBox()
-        combo.setIconSize(QSize(12, 12))
-        saved = self._settings.line_colors.load_saved_colors()
-        for name, label in items.items():
-            color = saved.get(name) or self._canvas.get_curve_color(name) or "#000000"
-            combo.addItem(LineColorManager.make_color_icon(color), label, name)
-        combo.addItem("None", None)
-
-        w_color = saved.get("w") or self._canvas.get_curve_color("w") or "#000000"
-        show_w_cb = QCheckBox("w")
-        show_w_cb.setIcon(LineColorManager.make_color_icon(w_color))
-        show_w_cb.setIconSize(QSize(12, 12))
-        show_w_cb.setChecked(True)
-        self._show_w_cb = show_w_cb
+        combo = CurveSelector(self._canvas, "bottom", none_text="None")
+        self._show_w_cb = CurveCheckBox(self._canvas, "w", text="w", axis="bottom.twin")
 
         wrapper = QWidget()
         layout = QHBoxLayout(wrapper)
@@ -317,22 +290,9 @@ class MBESolverApp(QMainWindow):
         layout.addWidget(QLabel("Bottom Plot:"))
         layout.addWidget(combo)
         layout.addSpacing(8)
-        layout.addWidget(show_w_cb)
+        layout.addWidget(self._show_w_cb)
         self._velocity_bar.add_widget(wrapper)
         return combo
-
-    def _update_bottom_plot_combo_icons(self) -> None:
-        """Refresh bottom-plot selector and w-toggle icons to match curve colors."""
-        combo = self._bottom_plot_combo
-        for i in range(combo.count()):
-            curve_id = combo.itemData(i)
-            if curve_id is None:
-                continue
-            color = self._canvas.get_curve_color(curve_id) or "#000000"
-            combo.setItemIcon(i, LineColorManager.make_color_icon(color))
-
-        w_color = self._canvas.get_curve_color("w") or "#000000"
-        self._show_w_cb.setIcon(LineColorManager.make_color_icon(w_color))
 
     # ---- Other helpers ----
     def _apply_saved_defaults(self) -> None:
@@ -492,7 +452,7 @@ class MBESolverApp(QMainWindow):
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(path.resolve())))
 
     def _apply_saved_view_preferences(self) -> None:
-        """Restore persisted grid and slider-range visibility settings on startup."""
+        """Restore the persisted slider-range and w visibility settings on startup."""
         for action_id in MENU_CHECKABLE_IDS:
             checked = self._settings.get_view_preference(action_id, False)
             self._menu_bar.set_checked(action_id, checked)
@@ -596,28 +556,10 @@ class MBESolverApp(QMainWindow):
                  "role": QAction.QuitRole},
             ],
             "View": [
-                {"id": "time_grid_menu", "submenu": "Time Grid", "items": [
-                    {"id": "show_time_major_grid", "text": "Major", "checkable": True, "checked": False},
-                    {"id": "show_time_minor_grid", "text": "Minor", "checkable": True, "checked": False},
-                ]},
-                {"id": "flux_grid_menu", "submenu": "Flux Grid", "items": [
-                    {"id": "show_flux_major_grid", "text": "Major", "checkable": True, "checked": False},
-                    {"id": "show_flux_minor_grid", "text": "Minor", "checkable": True, "checked": False},
-                ]},
-                {"id": "w_grid_menu", "submenu": "w Grid", "items": [
-                    {"id": "show_w_major_grid", "text": "Major", "checkable": True, "checked": False},
-                    {"id": "show_w_minor_grid", "text": "Minor", "checkable": True, "checked": False},
-                ]},
-                {"id": "bottom_panel_grid_menu", "submenu": "Bottom Panel Grid", "items": [
-                    {"id": "show_bottom_major_grid", "text": "Major", "checkable": True, "checked": False},
-                    {"id": "show_bottom_minor_grid", "text": "Minor", "checkable": True, "checked": False},
-                ]},
-                {"id": "sep"},
                 {"id": "show_slider_range_labels", "text": "Show Slider Range",
                  "checkable": True, "checked": False, "shortcut": "Ctrl+Alt+R"},
                 {"id": "sep"},
-                {"id": "line_colors_menu", "submenu": "Line Colors",
-                 "items": self._settings.line_colors.build_menu_items()},
+                {"id": "reset_plot_style", "text": "Reset Plot Style"},
             ],
             "Info": [
                 {"id": "show_data_summary", "text": "Data Summary", "shortcut": "Ctrl+Alt+D"},
@@ -660,7 +602,6 @@ class MBESolverApp(QMainWindow):
         states = self._capture_menu_check_states()
         self._menu_bar.set_menu_spec(self._build_menu_spec(), native_menubar=NATIVE_MENU_BAR)
         self._restore_menu_check_states(states)
-        self._settings.line_colors.update_all_menu_icons(self._menu_bar)
         self._set_fit_mode(self._fit_mode)
 
     def _build_menu_action_map(self) -> dict[str, Any]:
@@ -688,6 +629,7 @@ class MBESolverApp(QMainWindow):
             "check_for_updates": self._check_for_updates_manually,
             "show_about_dialog": self._show_about_dialog,
             "show_about_qt": self._show_about_qt,
+            "reset_plot_style": self._reset_plot_style,
         }
 
     # ---- File menu actions ----
@@ -928,34 +870,11 @@ class MBESolverApp(QMainWindow):
             self._show_error("Export Plot Failed", str(exc))
 
     # ---- View menu ----
-    def _handle_grid_toggle(self, action_id: str, checked: bool, *, redraw: bool = True) -> bool:
-        """Handle a grid-visibility menu toggle.
-
-        Args:
-            action_id: Menu-action identifier.
-            checked: New checked state.
-            redraw: Whether to redraw the canvas after handling.
-
-        Returns:
-            ``True`` if the action was recognized and handled.
-        """
-        grid_actions = {
-            "show_time_major_grid": lambda: self._canvas.set_time_grid(checked, "major"),
-            "show_time_minor_grid": lambda: self._canvas.set_time_grid(checked, "minor"),
-            "show_flux_major_grid": lambda: self._canvas.set_flux_grid(checked, "major"),
-            "show_flux_minor_grid": lambda: self._canvas.set_flux_grid(checked, "minor"),
-            "show_w_major_grid": lambda: self._canvas.set_w_grid(checked, "major"),
-            "show_w_minor_grid": lambda: self._canvas.set_w_grid(checked, "minor"),
-            "show_bottom_major_grid": lambda: self._canvas.set_profile_grid(checked, "major"),
-            "show_bottom_minor_grid": lambda: self._canvas.set_profile_grid(checked, "minor"),
-        }
-        handler = grid_actions.get(action_id)
-        if handler is None:
-            return False
-        handler()
-        if redraw:
-            self._canvas.redraw()
-        return True
+    def _reset_plot_style(self) -> None:
+        """Return curve styles, grids and legends to the settings file and save that."""
+        self._canvas.reset_config()
+        self._canvas.redraw()
+        self._settings.save_plot_config(self._canvas.get_config())
 
     def _handle_checkable_menu_action(
             self,
@@ -980,8 +899,6 @@ class MBESolverApp(QMainWindow):
         if action_id == "show_slider_range_labels":
             self._set_slider_range_labels_visible(checked)
             handled = True
-        else:
-            handled = self._handle_grid_toggle(action_id, checked, redraw=redraw)
         if handled and persist:
             self._settings.set_view_preference(action_id, checked)
         return handled
@@ -1136,21 +1053,6 @@ class MBESolverApp(QMainWindow):
         """
         if action_id in self._settings.recent_folders.action_map:
             self._open_recent_data_folder(self._settings.recent_folders.action_map[action_id])
-            return
-        if action_id.startswith(LINE_COLOR_ACTION_PREFIX):
-            curve_id = action_id[len(LINE_COLOR_ACTION_PREFIX):]
-            self._settings.line_colors.choose_color(
-                curve_id,
-                self,
-                self._menu_bar,
-                self._update_bottom_plot_combo_icons,
-            )
-            return
-        if action_id == RESET_LINE_COLORS_ACTION_ID:
-            self._settings.line_colors.reset_to_defaults(
-                self._menu_bar,
-                self._update_bottom_plot_combo_icons,
-            )
             return
         handler = self._build_menu_action_map().get(action_id)
         if handler is not None:

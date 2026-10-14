@@ -1,31 +1,26 @@
-"""Application-level settings, view preferences, line colors, and recent folders.
+"""Application-level settings, view preferences, plot style and recent folders.
 
 This module owns all QSettings persistence for the main window: app-default
-parameter snapshots, view-preference toggles, per-curve line colors, and the
-recent-data-folder history.
+parameter snapshots, view-preference toggles, the plot's user style (curve
+styles, grids; see ``PlotCanvas.get_config``) and the recent-data-folder
+history.
 """
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple
 
-from matplotlib import colors as mcolors
 from PySide6.QtCore import QSettings
-from PySide6.QtGui import QColor, QIcon, QPixmap
-from PySide6.QtWidgets import QColorDialog
 
 from app_io.legacy_keys import migrate_legacy_params, migrate_legacy_config
 from utils.helper_funcs import pretty_json, restore_special_floats
 
 if TYPE_CHECKING:
     from PySide6.QtCore import QSettings
-    from PySide6.QtWidgets import QWidget
 
     from app.parameter_tabs import ParameterTabsWidget
-    from app.plot import PlotCanvas
-    from sciwidgets.window import MenuBarController
 
 APP_DEFAULT_CONFIG_KEY = "defaults/parameter_tabs_config"
 """QSettings key used for default parameter-tab configuration."""
@@ -34,27 +29,28 @@ APP_DEFAULT_PARAMS_KEY = "defaults/parameter_values"
 """QSettings key used for default parameter values."""
 
 VIEW_PREFERENCE_KEYS = {
-    "show_time_major_grid": "view/show_time_major_grid",
-    "show_time_minor_grid": "view/show_time_minor_grid",
-    "show_flux_major_grid": "view/show_flux_major_grid",
-    "show_flux_minor_grid": "view/show_flux_minor_grid",
-    "show_w_major_grid": "view/show_w_major_grid",
-    "show_w_minor_grid": "view/show_w_minor_grid",
-    "show_bottom_major_grid": "view/show_bottom_major_grid",
-    "show_bottom_minor_grid": "view/show_bottom_minor_grid",
     "show_slider_range_labels": "view/show_slider_range_labels",
     "show_w": "view/show_w",
 }
 """Map view-action identifiers to their persisted QSettings keys."""
 
-LINE_COLOR_SETTINGS_PREFIX = "plot_colors/"
-"""Prefix used for persisted line-color settings."""
+PLOT_CONFIG_KEY = "plot/config"
+"""QSettings key of the plot's user style (``PlotCanvas.get_config``)."""
 
-LINE_COLOR_ACTION_PREFIX = "set_line_color__"
-"""Prefix used for line-color menu-action identifiers."""
+LEGACY_GRID_KEYS = {
+    "view/show_time_major_grid": [("top", "x_major"), ("bottom", "x_major")],
+    "view/show_time_minor_grid": [("top", "x_minor"), ("bottom", "x_minor")],
+    "view/show_flux_major_grid": [("top", "y_major")],
+    "view/show_flux_minor_grid": [("top", "y_minor")],
+    "view/show_w_major_grid": [("bottom.twin", "y_major")],
+    "view/show_w_minor_grid": [("bottom.twin", "y_minor")],
+    "view/show_bottom_major_grid": [("bottom", "y_major")],
+    "view/show_bottom_minor_grid": [("bottom", "y_minor")],
+}
+"""Grid preferences of versions before 8.13, and where they go in the plot config."""
 
-RESET_LINE_COLORS_ACTION_ID = "reset_line_colors"
-"""Menu-action identifier for restoring default line colors."""
+LEGACY_LINE_COLOR_PREFIX = "plot_colors/"
+"""Prefix of the per-curve colours saved by versions before 8.13."""
 
 RECENT_DATA_FOLDERS_KEY = "recent_data_folders"
 """QSettings key used for the recent-data-folder list."""
@@ -73,21 +69,15 @@ class Settings:
         self,
         organization: str,
         application: str,
-        canvas: "PlotCanvas",
     ) -> None:
         """Initialize the settings container.
 
         Args:
             organization: QSettings organization string.
             application: QSettings application string.
-            canvas: Plot canvas whose line colors are managed.
         """
         self._settings = QSettings(organization, application)
         self.recent_folders = RecentFoldersManager(self._settings)
-        self.line_colors = LineColorManager(
-            canvas=canvas,
-            settings=self._settings,
-        )
 
     def _serialize_for_settings(self, obj: Any) -> str:
         """Serialize an object to a JSON string for QSettings storage.
@@ -156,6 +146,44 @@ class Settings:
         except Exception as exc:
             return False, str(exc)
 
+    def load_plot_config(self) -> Dict[str, Any]:
+        """Return the saved plot style, converting older saved settings once.
+
+        Versions before 8.13 saved grids as view preferences and colours per
+        curve; if no plot config exists yet, those are turned into one and
+        saved. The old keys are left in place.
+
+        Returns:
+            Plot config for ``PlotCanvas.set_config`` (may be empty).
+        """
+        text = self._settings.value(PLOT_CONFIG_KEY, "", type=str)
+        if text:
+            try:
+                return json.loads(text)
+            except ValueError:
+                return {}
+
+        config: Dict[str, Any] = {}
+        for key, targets in LEGACY_GRID_KEYS.items():
+            value = self._settings.value(key, False)
+            on = value.strip().lower() in {"1", "true", "yes", "on"} if isinstance(value, str) else bool(value)
+            if on:
+                for axis_id, grid_key in targets:
+                    config.setdefault("axes", {}).setdefault(axis_id, {})[grid_key] = True
+        self._settings.beginGroup(LEGACY_LINE_COLOR_PREFIX.rstrip("/"))
+        for curve_id in self._settings.childKeys():
+            color = self._settings.value(curve_id, "", type=str)
+            if color:
+                config.setdefault("curves", {}).setdefault(curve_id, {})["color"] = color
+        self._settings.endGroup()
+        if config:
+            self.save_plot_config(config)
+        return config
+
+    def save_plot_config(self, config: Dict[str, Any]) -> None:
+        """Save the plot style (``PlotCanvas.get_config``)."""
+        self._settings.setValue(PLOT_CONFIG_KEY, json.dumps(config))
+
     def get_view_preference(self, action_id: str, default: bool = False) -> bool:
         """Return one persisted boolean view preference.
 
@@ -186,175 +214,6 @@ class Settings:
         key = VIEW_PREFERENCE_KEYS.get(action_id)
         if key is not None:
             self._settings.setValue(key, checked)
-
-
-class LineColorManager:
-    """Manage curve colors, their persistence, and related menu icons."""
-
-    def __init__(
-        self,
-        canvas: "PlotCanvas",
-        settings: "QSettings",
-    ) -> None:
-        """Initialize the line-color manager.
-
-        Args:
-            canvas: Plot canvas whose curve colors are managed.
-            settings: Application QSettings instance.
-        """
-        self._canvas = canvas
-        self._settings = settings
-
-    def apply_saved_colors(self) -> None:
-        """Apply persisted colors to the canvas and redraw it."""
-
-        self._canvas.apply_curve_colors(self.load_saved_colors())
-        self._canvas.redraw()
-
-    def load_saved_colors(self) -> Dict[str, str]:
-        """Return a mapping of curve IDs to colors.
-
-        Returns:
-            Mapping containing default colors merged with any saved overrides.
-        """
-        colors = self._get_default_colors()
-        for curve_id in colors:
-            saved = self._settings.value(self._settings_key(curve_id), "", type=str)
-            if saved:
-                colors[curve_id] = saved
-        return colors
-
-    def choose_color(
-        self,
-        curve_id: str,
-        parent: "QWidget",
-        menu_bar: "MenuBarController",
-        on_combo_icons_changed: Callable[[], None],
-    ) -> None:
-        """Open a color dialog, then persist and apply the chosen color.
-
-        Args:
-            curve_id: Internal curve identifier.
-            parent: Parent widget for the color dialog.
-            menu_bar: Menu controller whose icons should be updated.
-            on_combo_icons_changed: Callback invoked after icon updates.
-        """
-        current = self._canvas.get_curve_color(curve_id) or "#000000"
-        color = QColorDialog.getColor(QColor(current), parent, "Choose Line Color")
-        if not color.isValid():
-            return
-
-        color_name = color.name()
-        if self._canvas.set_curve_color(curve_id, color_name):
-            self._save_color(curve_id, color_name)
-            self._update_menu_icon(menu_bar, curve_id, color_name)
-            on_combo_icons_changed()
-            self._canvas.redraw()
-
-    def reset_to_defaults(
-        self,
-        menu_bar: "MenuBarController",
-        on_combo_icons_changed: Callable[[], None],
-    ) -> None:
-        """Restore all curve colors to factory defaults.
-
-        Args:
-            menu_bar: Menu controller whose icons should be updated.
-            on_combo_icons_changed: Callback invoked after icon updates.
-        """
-        defaults = self._get_default_colors()
-        self._canvas.apply_curve_colors(defaults)
-        for curve_id, color in defaults.items():
-            self._save_color(curve_id, color)
-            self._update_menu_icon(menu_bar, curve_id, color)
-        on_combo_icons_changed()
-        self._canvas.redraw()
-
-    def update_all_menu_icons(self, menu_bar: "MenuBarController") -> None:
-        """Refresh every line-color menu icon to match saved colors.
-
-        Args:
-            menu_bar: Menu controller whose icons should be updated.
-        """
-        for curve_id, color in self.load_saved_colors().items():
-            self._update_menu_icon(menu_bar, curve_id, color)
-
-    def build_menu_items(self) -> List[Dict[str, Any]]:
-        """Build menu-item specifications for the line-colors submenu.
-
-        Returns:
-            List of menu-item specification dictionaries.
-        """
-        items: List[Dict[str, Any]] = [
-            {"id": f"{LINE_COLOR_ACTION_PREFIX}data_points", "text": "Data Points..."},
-            {"id": f"{LINE_COLOR_ACTION_PREFIX}flux", "text": "Flux..."},
-            {"id": "sep"},
-            {"id": f"{LINE_COLOR_ACTION_PREFIX}w", "text": "w..."},
-            {"id": "sep"},
-        ]
-        for name, text in self._canvas.get_profile_combo_labels().items():
-            items.append({"id": f"{LINE_COLOR_ACTION_PREFIX}{name}", "text": f"{text}..."})
-
-        items.append({"id": "sep"})
-        items.append({"id": RESET_LINE_COLORS_ACTION_ID, "text": "Restore Default Line Colors"})
-        return items
-
-    @staticmethod
-    def make_color_icon(color: str, size: int = 12) -> QIcon:
-        """Return a square icon filled with a given color.
-
-        Args:
-            color: Color value.
-            size: Icon size in pixels.
-
-        Returns:
-            Qt icon filled with the requested color.
-        """
-        pix = QPixmap(size, size)
-        pix.fill(QColor(mcolors.to_hex(color)))
-        return QIcon(pix)
-
-    def _get_default_colors(self) -> Dict[str, str]:
-        """Return the factory-default curve colors (from the plot settings).
-
-        Returns:
-            Mapping from curve identifiers to default colors.
-        """
-        return self._canvas.default_curve_colors()
-
-    def _settings_key(self, curve_id: str) -> str:
-        """Return the QSettings key for a curve color.
-
-        Args:
-            curve_id: Internal curve identifier.
-
-        Returns:
-            Full QSettings key string.
-        """
-        return f"{LINE_COLOR_SETTINGS_PREFIX}{curve_id}"
-
-    def _save_color(self, curve_id: str, color: str) -> None:
-        """Persist one curve color.
-
-        Args:
-            curve_id: Internal curve identifier.
-            color: Color value to persist.
-        """
-        self._settings.setValue(self._settings_key(curve_id), color)
-
-    def _update_menu_icon(self, menu_bar: "MenuBarController", curve_id: str, color: str) -> None:
-        """Update the menu icon associated with one curve color.
-
-        Args:
-            menu_bar: Menu controller holding the relevant action.
-            curve_id: Internal curve identifier.
-            color: New color value.
-        """
-        action_id = f"{LINE_COLOR_ACTION_PREFIX}{curve_id}"
-        action = menu_bar._actions.get(action_id)
-        if action is not None:
-            action.setIcon(self.make_color_icon(color))
-            action.setIconVisibleInMenu(True)
 
 
 class RecentFoldersManager:
