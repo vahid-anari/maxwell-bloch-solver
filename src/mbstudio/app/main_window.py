@@ -45,7 +45,7 @@ show_splash_message("Importing config packages / velocity bar...")
 from mbstudio.app.velocity_bar_controller import VelocityBarController
 
 show_splash_message("Importing config packages / update checker...")
-from mbstudio.app.update_checker import UpdateChecker
+from mbstudio.app.update_checker import RELEASES_URL, UpdateChecker
 
 show_splash_message("Importing config packages / data I/O...")
 from mbstudio.io.data_io import (
@@ -102,6 +102,7 @@ from sciwidgets.window import MenuBarController, StatusBarController
 show_splash_message("Importing config packages / helper functions...")
 from mbstudio.utils.helper_funcs import pretty_json, read_json, set_win_center
 from mbstudio.ui.solver_step_viewer import StepScatterWidget
+from mbstudio.ui.update_dialog import UpdateDialog
 from mbstudio.utils.units import VELOCITY_UNIT_TEXT
 from mbstudio.io.legacy_keys import merge_onto_defaults
 from sciwidgets.params import SliderWidgetBase
@@ -1001,15 +1002,23 @@ class MBESolverApp(QMainWindow):
         self._manual_update_check = True
         self._update_checker.check()
 
-    def _on_update_available(self, latest: str, url: str) -> None:
-        """Tell the user a newer version exists and how to install it.
+    def _on_update_available(self, latest: str, url: str, notes: list) -> None:
+        """Tell the user a newer version exists, how to install it, and what changed.
 
         Args:
             latest: Latest version string found on PyPI.
             url: PyPI page of the application.
+            notes: ``(version, markdown)`` release notes of the newer versions,
+                newest first; empty when they could not be read.
         """
 
         self._manual_update_check = False
+        if notes:
+            UpdateDialog(
+                APP_NAME, latest, APP_VERSION, UPDATE_COMMAND, DIST_NAME,
+                notes, url, RELEASES_URL, parent=self,
+            ).exec()
+            return
         result = ask_question(
             title="Update Available",
             text=f"<b>{APP_NAME} {latest}</b> is available.\nYou have version {APP_VERSION}.",

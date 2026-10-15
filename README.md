@@ -45,7 +45,8 @@ Use the menu bar to load data folders, adjust parameters, run the solver and exp
 
 ## Updating
 
-The app tells you when a new version is available. To update:
+The app tells you when a new version is available and shows what is new in it
+(see also [CHANGELOG.md](CHANGELOG.md)). To update:
 
 ```bash
 pipx upgrade maxwell-bloch-studio

@@ -581,11 +581,18 @@ Grid lines, curve colours and line styles are set from the plot's right-click me
   Equations Reference & \key{Ctrl+Alt+E} & Open the bundled equations reference PDF \\
   Solver Step Viewer  & \key{Ctrl+Alt+V} & Open the interactive solver-step viewer \\
   User Guide          & \key{F1}         & Open the user guide PDF if available \\
+  Use from Python     & ---              & Show the example script for your own scripts \\
+  Check for Updates   & ---              & Ask PyPI whether a newer version exists \\
   About This App      & ---              & Show application and author information \\
   About Qt            & ---              & Show the Qt about dialog \\
   \bottomrule
 \end{tabular}
 \end{center}
+
+The app also checks for a newer version a few seconds after it starts. When one exists, a notice
+shows how to update and, below it, \textbf{What's new}: the release notes of every newer version,
+newest first. \menu{Open Release Notes} opens all notes on GitHub. Without an internet connection
+the check is skipped silently.
 
 % ══════════════════════════════════════════════════════════════════════════════
 \section{Exporting Plots}

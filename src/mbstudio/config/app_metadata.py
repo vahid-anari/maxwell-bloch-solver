@@ -39,7 +39,10 @@ APP_AUTHOR_NAME = "Vahid Anari"
 APP_AUTHOR_EMAIL = "vahid.anari8@gmail.com"
 """Primary author email address."""
 
-APP_AUTHOR_GITHUB = "https://github.com/vahid-anari/maxwell-bloch-studio"
+GITHUB_REPO = "vahid-anari/maxwell-bloch-studio"
+"""GitHub repository (``owner/name``); its Releases hold the release notes."""
+
+APP_AUTHOR_GITHUB = f"https://github.com/{GITHUB_REPO}"
 """Author GitHub profile or repository URL, if available."""
 
 APP_AUTHOR_WEBSITE = ""
