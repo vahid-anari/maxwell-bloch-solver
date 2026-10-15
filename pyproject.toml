@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "maxwell-bloch-solver"
-version = "9.1.1"
+version = "9.2.0"
 description = "Desktop app for simulating and fitting Maxwell-Bloch models of astrophysical maser light curves"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -35,7 +35,7 @@ dependencies = [
     "psutil>=5.9",
     "pygments>=2.0",
     "sciwidgets~=0.5.0",
-    "maxbloch~=0.1.0",
+    "maxbloch==0.1.0",
 ]
 
 [project.optional-dependencies]

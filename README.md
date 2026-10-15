@@ -1,5 +1,9 @@
 # Maxwell Bloch Solver
 
+> **This app is now [Maxwell Bloch Studio](https://pypi.org/project/maxwell-bloch-studio/).**
+> Switch with `pipx uninstall maxwell-bloch-solver` and
+> `pipx install maxwell-bloch-studio`; settings and parameter files carry over.
+
 A PySide6 desktop application for simulating, visualizing, and fitting one-dimensional Maxwell-Bloch models to astronomical maser light-curve data. The application combines an interactive Qt interface, configurable physical and numerical parameters, Numba-accelerated time evolution, and publication-oriented plotting/export tools.
 
 ## Screenshot
