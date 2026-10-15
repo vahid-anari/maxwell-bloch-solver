@@ -3,8 +3,8 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "maxwell-bloch-solver"
-version = "9.1.1"
+name = "maxwell-bloch-studio"
+version = "10.0.0"
 description = "Desktop app for simulating and fitting Maxwell-Bloch models of astrophysical maser light curves"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -35,23 +35,23 @@ dependencies = [
     "psutil>=5.9",
     "pygments>=2.0",
     "sciwidgets~=0.5.0",
-    "maxbloch~=0.1.0",
+    "mbsolver~=0.2.0",
 ]
 
 [project.optional-dependencies]
 dev = ["build", "twine"]
 
 [project.gui-scripts]
-maxwell-bloch-solver = "mbsolver.main:main"
-mbsolver = "mbsolver.main:main"
+maxwell-bloch-studio = "mbstudio.main:main"
+mbstudio = "mbstudio.main:main"
 
 [project.urls]
-Homepage = "https://github.com/vahid-anari/maxwell-bloch-solver"
-Repository = "https://github.com/vahid-anari/maxwell-bloch-solver"
-Issues = "https://github.com/vahid-anari/maxwell-bloch-solver/issues"
+Homepage = "https://github.com/vahid-anari/maxwell-bloch-studio"
+Repository = "https://github.com/vahid-anari/maxwell-bloch-studio"
+Issues = "https://github.com/vahid-anari/maxwell-bloch-studio/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-"mbsolver.resources" = ["*.json", "*.pdf", "*.py", "icons/*.png"]
+"mbstudio.resources" = ["*.json", "*.pdf", "*.py", "icons/*.png"]

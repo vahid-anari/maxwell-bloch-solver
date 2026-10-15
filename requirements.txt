@@ -1,9 +1,9 @@
 # Dependencies for running from a source folder (python main.py).
-# Installed users get them automatically: pipx install maxwell-bloch-solver
+# Installed users get them automatically: pipx install maxwell-bloch-studio
 PySide6
 numpy
 matplotlib
 psutil
 pygments
 sciwidgets~=0.5.0
-maxbloch~=0.1.0
+mbsolver~=0.2.0
