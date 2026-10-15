@@ -53,4 +53,4 @@ def save(fig, name):
     fig.savefig(name, dpi=DPI); plt.close(fig)
 
 fig, ax = fig_ax(); burst_curves(ax, 0.25, 0.97, 0.16, 0.86)
-save(fig, "src/mbstudio/resources/icons/app_image2.png")
+save(fig, "src/mbstudio/resources/icons/app_image.png")
