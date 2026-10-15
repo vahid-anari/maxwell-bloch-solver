@@ -14,6 +14,8 @@ import numpy as np
 from maxbloch import Pulse, Steps
 from maxbloch.two_level import solve_1d
 
+from mbsolver.sample import sample_scaling
+
 
 def pulse_from_value(value: Mapping[str, Any]) -> Optional[Pulse]:
     """Return the ``Pulse`` for a pulse-widget value (``None`` for an empty mapping)."""
@@ -47,10 +49,10 @@ def solve_maxwell_bloch(params: Mapping[str, Any]) -> dict[str, np.ndarray]:
         Mapping with ``time``, ``intensity``, ``w``, ``lambda_n`` (pump),
         ``A0`` (boundary field) and ``t1``, ``t2`` on the time grid.
     """
-    sample = params["solve.sample"]
+    derived = sample_scaling(params["solve.sample"])
     ics = params["solve.ics"]
     if ics["use_theta0"]:
-        initial = {"theta0": sample["theta0"]}
+        initial = {"theta0": derived["theta0"]}
     else:
         initial = {"w0": ics["w0"], "R0": ics["R0"]}
 
@@ -58,7 +60,7 @@ def solve_maxwell_bloch(params: Mapping[str, Any]) -> dict[str, np.ndarray]:
         t_max=params["solve.grid.t_max"],
         nt=params["solve.grid.nt"],
         nz=params["solve.grid.nz"],
-        eta=sample["eta"],
+        eta=derived["eta"],
         pump=[pulse_from_value(params.get(f"solve.pump.pulse{i}", {})) for i in (1, 2, 3)],
         field_in=pulse_from_value(params["solve.bcs"]),
         t1=steps_from_value(params["solve.t1"]),

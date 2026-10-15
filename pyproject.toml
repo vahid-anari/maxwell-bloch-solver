@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "maxwell-bloch-solver"
-version = "9.0.0"
+version = "9.1.0"
 description = "Desktop app for simulating and fitting Maxwell-Bloch models of astrophysical maser light curves"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -54,4 +54,4 @@ Issues = "https://github.com/vahid-anari/maxwell-bloch-solver/issues"
 where = ["src"]
 
 [tool.setuptools.package-data]
-"mbsolver.resources" = ["*.json", "*.pdf", "icons/*.png"]
+"mbsolver.resources" = ["*.json", "*.pdf", "*.py", "icons/*.png"]

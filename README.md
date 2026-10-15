@@ -53,6 +53,42 @@ pipx upgrade maxwell-bloch-solver
 
 or `pip install -U maxwell-bloch-solver` in the environment where you installed it.
 
+## Using the solver from Python
+
+Parameter files saved by the app can be solved in your own scripts. Install the
+app with `pip` in the Python you run the script with (a `pipx` install is kept
+separate from your own Python):
+
+```python
+import mbsolver
+
+f = mbsolver.ParamsFile("run_1.json")       # File → Save Parameters As…
+params = f.params()                          # a fresh dict, safe to change
+params["solve.sample"]["l"] = 1.0e13         # change anything
+res = mbsolver.solve(params)                 # same numbers as the app
+
+res["time"]             # time grid
+res["intensity"][-1]    # intensity at the exit of the medium
+```
+
+For the parameter file of a data folder, `f.velocities` lists the velocity
+components and `f.params(12.3)` picks one. `f.metadata` and `f.app_version`
+tell who saved the file, when, and with which version.
+
+`params` is a plain dictionary keyed by the names the app uses
+(`"solve.grid.nt"`, `"solve.sample"`, `"solve.pump.pulse1"`, …). η and θ₀ are
+computed from the sample values (ν, Γ, T₀, L, n₀), as in the app;
+`mbsolver.scaling(nu=…, gamma=…, t0=…, l=…, n0=…)` returns them and the other
+derived quantities. The result holds `time`, `intensity` and `w` (one row per
+stored z plane), `lambda_n` (pump), `A0` (boundary field), `t1` and `t2`, in the
+solver's dimensionless units; the app's flux scaling and offsets are not applied.
+
+A commented example script listing all keys ships with the app: open
+*Help → Use from Python…* to copy or save it, or read
+[`example_script.py`](https://github.com/vahid-anari/maxwell-bloch-solver/blob/main/src/mbsolver/resources/example_script.py).
+To build the parameters in code instead, use the
+[maxbloch](https://github.com/vahid-anari/maxbloch) package directly.
+
 ## Input data format
 
 The application expects light-curve files as plain text files with at least two whitespace-separated columns:

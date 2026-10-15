@@ -31,3 +31,6 @@ EQUATIONS_PDF_PATH = RESOURCES_DIR / "equations_reference.pdf"
 
 USER_GUIDE_PATH = RESOURCES_DIR / "user_guide.pdf"
 """Path to the user guide PDF."""
+
+EXAMPLE_SCRIPT_PATH = RESOURCES_DIR / "example_script.py"
+"""Example script for using the solver from Python (Help → Use from Python…)."""

@@ -49,7 +49,6 @@ class SamplePropertiesWidget(ParameterWidgetBase):
             w.nameWidthChanged.connect(self._update_layout)
 
         self._scaling_params = ScalingParameters(parent=self)
-        self._scaling_values: Dict[str, Any] = {}
 
         self._update_scales_values()
 
@@ -131,7 +130,6 @@ class SamplePropertiesWidget(ParameterWidgetBase):
             n0=self._widgets["n0"].get_value() * self._unit_to_si_factors["n0"],
             t0=self._widgets["t0"].get_value() * self._unit_to_si_factors["t0"],
         )
-        self._scaling_values = self._scaling_params.get_value()
 
     def _on_value_changed(self) -> None:
         """Recompute scaling values and emit the combined widget value."""
@@ -141,17 +139,16 @@ class SamplePropertiesWidget(ParameterWidgetBase):
 
     # ----- public API -----
     def get_value(self) -> Dict[str, float]:
-        """Return all sample and derived scaling values in SI units.
+        """Return the sample values in SI units.
+
+        The derived values (η, θ₀, ...) are not stored; whoever needs them
+        computes them with :func:`mbsolver.sample.sample_scaling`.
 
         Returns:
-            Mapping containing derived scaling values and raw sample properties,
-            all converted to SI units.
+            Mapping with ``nu``, ``gamma``, ``t0``, ``l`` and ``n0`` in SI units.
         """
 
-        out: Dict[str, Any] = {
-            "_comment": "All values are in SI units.",
-            **self._scaling_values,
-        }
+        out: Dict[str, Any] = {"_comment": "All values are in SI units."}
         for n_id, w in self._widgets.items():
             out[n_id] = w.get_value() * self._unit_to_si_factors[n_id]
 

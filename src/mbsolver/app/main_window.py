@@ -571,6 +571,7 @@ class MBESolverApp(QMainWindow):
             ],
             "Help": [
                 {"id": "open_user_guide", "text": "User Guide", "shortcut": QKeySequence.HelpContents},
+                {"id": "show_python_example", "text": "Use from Python..."},
                 {"id": "sep"},
                 {"id": "check_for_updates", "text": "Check for Updates..."},
                 {"id": "sep"},
@@ -629,6 +630,7 @@ class MBESolverApp(QMainWindow):
             "open_solver_step_viewer": self._open_solver_step_viewer,
             "open_user_guide": self._open_user_guide,
             "check_for_updates": self._check_for_updates_manually,
+            "show_python_example": self._show_python_example,
             "show_about_dialog": self._show_about_dialog,
             "show_about_qt": self._show_about_qt,
             "reset_plot_style": self._reset_plot_style,
@@ -958,6 +960,12 @@ class MBESolverApp(QMainWindow):
     def _open_user_guide(self) -> None:
         """Open the user guide PDF."""
         self._open_path(USER_GUIDE_PATH, "User Guide", "user_guide.pdf not found.")
+
+    def _show_python_example(self) -> None:
+        """Show the example script for using the solver from Python."""
+        from mbsolver.ui.python_example import PythonExampleDialog
+
+        PythonExampleDialog(self).exec()
 
     def _show_about_dialog(self) -> None:
         """Show the application About dialog with version and author information."""

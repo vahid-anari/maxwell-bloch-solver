@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Dict, Optional
 
-import numpy as np
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
@@ -21,7 +20,7 @@ from mbsolver.config.app_style import SCALING_PARAMS_MAP_GROUP_ID_TO_LABEL, USE_
 from mbsolver.config.ui_defaults import SCALING_PARAM_DIGIT, SCALING_PARAM_SIZE
 from sciwidgets.formatting import pretty_sci_text
 from sciwidgets.labels import MathLabel
-from mbsolver.utils.constants_si import C, EPSILON_0, H_BAR, MU_0, PI
+from mbsolver.sample import scaling
 from mbsolver.utils.helper_funcs import make_box
 
 
@@ -278,14 +277,9 @@ class ScalingParameters:
             t0: Characteristic time scale in SI units.
         """
 
-        omega0 = 2 * PI * nu
-        k = omega0 / C
-        _lambda = C / nu
-        t_r = 2.0 * k**2 / (3.0 * PI * gamma * n0 * l)
-        N = n0 * _lambda * l**2
-        self._eta = eta = t0 / t_r
-        self._theta0 = theta0 = 2.0 / np.sqrt(N)
-        lambda0 = 1.0 / t0
+        v = scaling(nu=nu, gamma=gamma, t0=t0, l=l, n0=n0)
+        self._eta = v["eta"]
+        self._theta0 = v["theta0"]
 
         input_p = self._params["input"]
         input_p["nu"].set_value(nu)
@@ -295,36 +289,20 @@ class ScalingParameters:
         input_p["t0"].set_value(t0)
 
         shared_p = self._params["shared"]
-        shared_p["omega"].set_value(omega0)
-        shared_p["lambda"].set_value(_lambda)
-        shared_p["k"].set_value(k)
-        shared_p["t_r"].set_value(t_r)
-        shared_p["N"].set_value(N)
-        shared_p["theta0"].set_value(theta0)
-        shared_p["eta"].set_value(eta)
-        shared_p["lambda0"].set_value(lambda0)
-
-        d = np.sqrt(3 * PI * EPSILON_0 * H_BAR * gamma / k**3)
-        p0 = n0 * d
-        e0 = H_BAR / (t0 * d)
-        i0 = 0.5 * EPSILON_0 * C * e0**2
+        for key in ("omega", "lambda", "k", "t_r", "N", "theta0", "eta", "lambda0"):
+            shared_p[key].set_value(v[key])
 
         electric_p = self._params["electric"]
-        electric_p["d"].set_value(d)
-        electric_p["e0"].set_value(e0)
-        electric_p["p0"].set_value(p0)
-        electric_p["i0"].set_value(i0)
-
-        mu = np.sqrt(3 * PI * H_BAR * gamma / (MU_0 * k**3))
-        m0 = n0 * mu
-        b0 = H_BAR / (t0 * mu)
-        i0 = C / (2.0 * MU_0) * b0**2
+        electric_p["d"].set_value(v["d"])
+        electric_p["e0"].set_value(v["e0"])
+        electric_p["p0"].set_value(v["p0"])
+        electric_p["i0"].set_value(v["i0_electric"])
 
         magnetic_p = self._params["magnetic"]
-        magnetic_p["mu"].set_value(mu)
-        magnetic_p["b0"].set_value(b0)
-        magnetic_p["m0"].set_value(m0)
-        magnetic_p["i0"].set_value(i0)
+        magnetic_p["mu"].set_value(v["mu"])
+        magnetic_p["b0"].set_value(v["b0"])
+        magnetic_p["m0"].set_value(v["m0"])
+        magnetic_p["i0"].set_value(v["i0_magnetic"])
 
     def show_formula(self) -> None:
         """Open a dialog displaying all scaling-parameter formulas."""
