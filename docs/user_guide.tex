@@ -212,6 +212,14 @@ A selector labeled \textbf{Bottom Plot} appears beside the velocity controls and
 auxiliary quantity is shown in the lower panel. The \textbf{w} check box next to it shows or hides
 the population inversion on the panel's right axis. Both show each curve's colour.
 
+Figure~\ref{fig:main-window} shows the window in standalone mode.
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{figures/main_window.png}
+  \caption{The main window in standalone mode: plot area (top) and parameter tabs (bottom). The fit-mode toolbar is inactive.}
+  \label{fig:main-window}
+\end{figure}
+
 % ══════════════════════════════════════════════════════════════════════════════
 \section{Parameter Tabs}
 \label{sec:tabs}
@@ -416,11 +424,26 @@ Right-click a panel to change how it looks:
 These choices are saved between sessions and are also used when exporting the plot.
 \menu{View $\to$ Reset Plot Style} returns the whole figure to its defaults.
 
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{figures/plot_menu.png}
+  \caption{Right-clicking the bottom panel: \menu{Curves} lists each curve with its colour, each with a \menu{Style...} entry.}
+  \label{fig:plot-menu}
+\end{figure}
+
 % ══════════════════════════════════════════════════════════════════════════════
 \section{Fit Mode}
 \label{sec:fitmode}
 
 Fit mode is used to compare the model with observed light curves one velocity component at a time.
+Figure~\ref{fig:fit-mode} shows a data folder loaded: the toolbar is active, the top panel shows the
+observed flux with the model, and the time axis is in days.
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{figures/fit_mode.png}
+  \caption{Fit mode with a data folder loaded. The selected velocity component is saved (\checkmark), and $\chi^2$ shows the mismatch for it.}
+  \label{fig:fit-mode}
+\end{figure}
 
 \subsection{Loading a Data Folder}
 
@@ -654,6 +677,13 @@ res["intensity"][-1]    # intensity at the exit of the medium
 \menu{Help $\to$ Use from Python...} shows a commented example script that lists every
 parameter and result key; copy it or save it as a \texttt{.py} file to start from.
 \end{notebox}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/python_dialog.png}
+  \caption{\menu{Help $\to$ Use from Python...}: the example script, ready to copy or save.}
+  \label{fig:python-dialog}
+\end{figure}
 
 The numerical solver itself is the separate package \texttt{mbsolver}
 (\texttt{pip install mbsolver}), for building parameters directly in code.
