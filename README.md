@@ -156,7 +156,7 @@ src/mbstudio/
 ├── ui/               # physics parameter widgets, dialogs, splash screen, step viewer
 ├── io/               # data and parameter import/export
 ├── config/           # app metadata, style and UI defaults
-├── utils/            # units, constants, helper functions
+├── utils/            # units, helper functions
 └── resources/        # settings.json, icons, user guide and equations PDFs
 ```
 
