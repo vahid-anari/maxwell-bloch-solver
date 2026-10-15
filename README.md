@@ -2,9 +2,7 @@
 
 A PySide6 desktop application for simulating, visualizing, and fitting one-dimensional Maxwell-Bloch models to astronomical maser light-curve data. The application combines an interactive Qt interface, configurable physical and numerical parameters, Numba-accelerated time evolution, and publication-oriented plotting/export tools.
 
-## Screenshot
-
-<img src="https://raw.githubusercontent.com/vahid-anari/maxwell-bloch-studio/main/assets/main_window.png" width="1512" alt="Maxwell Bloch Studio main window">
+<img src="https://raw.githubusercontent.com/vahid-anari/maxwell-bloch-studio/main/docs/figures/main_window.png" width="1512" alt="Maxwell Bloch Studio main window">
 
 ## Features
 
@@ -46,7 +44,7 @@ Use the menu bar to load data folders, adjust parameters, run the solver and exp
 ## Updating
 
 The app tells you when a new version is available and shows what is new in it
-(see also [CHANGELOG.md](CHANGELOG.md)). To update:
+(see also [CHANGELOG.md](https://github.com/vahid-anari/maxwell-bloch-studio/blob/main/CHANGELOG.md)). To update:
 
 ```bash
 pipx upgrade maxwell-bloch-studio
@@ -88,7 +86,8 @@ A commented example script listing all keys ships with the app: open
 *Help → Use from Python…* to copy or save it, or read
 [`example_script.py`](https://github.com/vahid-anari/maxwell-bloch-studio/blob/main/src/mbstudio/resources/example_script.py).
 To build the parameters in code instead, use the
-[mbsolver](https://github.com/vahid-anari/mbsolver) package directly.
+[mbsolver](https://github.com/vahid-anari/mbsolver) package directly; its
+`mbsolver.scaling()` gives η and θ₀ from the physical sample values.
 
 ## Input data format
 
@@ -165,7 +164,7 @@ package; the widgets come from [sciwidgets](https://github.com/vahid-anari/sciwi
 
 ## Earlier name
 
-Up to version 9.1 the app was called **Maxwell Bloch Solver** (`pip install
+Up to version 9.2 the app was called **Maxwell Bloch Solver** (`pip install
 maxwell-bloch-solver`, command `mbsolver`). The name `mbsolver` now belongs to
 the solver package. To move over:
 
