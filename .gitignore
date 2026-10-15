@@ -26,3 +26,12 @@ build/
 design/
 *.egg-info/
 /*.pdf
+
+# LaTeX build files (docs/)
+docs/build/
+*.aux
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.toc
+*.out

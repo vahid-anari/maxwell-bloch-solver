@@ -14,6 +14,7 @@ from PySide6.QtWidgets import QApplication
 
 from mbstudio.paths import APP_ICON_PATH, APP_IMAGE_PATH
 from mbstudio.config import splash_state
+from mbstudio.config.app_metadata import APP_VERSION
 from mbstudio.ui.splash_screen import SplashScreen
 
 
@@ -51,7 +52,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     splash_width = 16 * base
     splash_height = 9 * base
 
-    splash = SplashScreen(app, str(APP_IMAGE_PATH), splash_width, splash_height, 0.05)
+    splash = SplashScreen(
+        app,
+        str(APP_IMAGE_PATH),
+        splash_width,
+        splash_height,
+        0.05,
+        title="Maxwell\nBloch\nStudio",
+        subtitle=f"Version {APP_VERSION}",
+    )
     splash.show_message("Starting...")
     splash_state.splash = splash
 

@@ -3,7 +3,7 @@
 from time import sleep
 
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QFont, QPixmap
+from PySide6.QtGui import QColor, QFont, QPainter, QPixmap
 from PySide6.QtWidgets import QApplication, QSplashScreen
 
 import mbstudio.config.splash_state as splash_state
@@ -25,6 +25,35 @@ def show_splash_message(text: str) -> None:
         QApplication.processEvents()
 
 
+def _draw_title(pixmap: QPixmap, title: str, subtitle: str) -> None:
+    """Draw the title and subtitle at the top left of the splash image.
+
+    The text is drawn by the app rather than baked into the image, so a new
+    version or name never needs a new picture.
+    """
+    if not title and not subtitle:
+        return
+    h = pixmap.height() / pixmap.devicePixelRatio()
+    x = 0.054 * pixmap.width() / pixmap.devicePixelRatio()
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.TextAntialiasing)
+    font = QFont("Times New Roman")
+    font.setPixelSize(round(0.108 * h))
+    painter.setFont(font)
+    painter.setPen(Qt.white)
+    y = 0.095 * h
+    line_step = 0.127 * h
+    for line in title.splitlines():
+        y += line_step * (0.82 if y < 0.1 * h else 1.0)
+        painter.drawText(round(x), round(y), line)
+    if subtitle:
+        font.setPixelSize(round(0.048 * h))
+        painter.setFont(font)
+        painter.setPen(QColor(200, 225, 255))
+        painter.drawText(round(x + 0.003 * h), round(y + 0.105 * h), subtitle)
+    painter.end()
+
+
 class SplashScreen(QSplashScreen):
     """Application splash screen with a simple message-display API.
 
@@ -39,6 +68,8 @@ class SplashScreen(QSplashScreen):
         width: int,
         height: int,
         delay_sec: float = 0.0,
+        title: str = "",
+        subtitle: str = "",
     ) -> None:
         """Initialize the splash screen.
 
@@ -49,21 +80,27 @@ class SplashScreen(QSplashScreen):
             height: Target splash-screen height in pixels.
             delay_sec: Delay in seconds applied after updating the splash
                 message.
+            title: Text drawn at the top left, one line per ``\n``
+                (e.g. the application name).
+            subtitle: Smaller text below the title (e.g. the version).
 
         Returns:
             None.
         """
         bg = QPixmap(image_path)
+        dpr = app.devicePixelRatio()  # 2 on Retina screens: keep the image sharp
         pixmap = bg.scaled(
-            width,
-            height,
+            round(width * dpr),
+            round(height * dpr),
             Qt.KeepAspectRatioByExpanding,
             Qt.SmoothTransformation,
         )
+        pixmap.setDevicePixelRatio(dpr)
+        _draw_title(pixmap, title, subtitle)
         super().__init__(pixmap)
         self.app = app
         self.delay_sec = delay_sec
-        self.setFont(QFont("Times New Roman", 18))
+        self.setFont(QFont("Times New Roman", 15))
         self.setWindowFlag(Qt.WindowStaysOnTopHint, True)
         self.show()
         self.raise_()

@@ -1,0 +1,89 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{style}[2026/10/15 Maxwell Bloch Studio documentation style]
+
+% ── Packages ──────────────────────────────────────────────────────────────────
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{tcolorbox}
+\usepackage{parskip}
+\usepackage{bm}
+\usepackage{footmisc}
+\usepackage{hyperref}
+
+% ── Colours ───────────────────────────────────────────────────────────────────
+\definecolor{accent}{RGB}{30,90,160}
+\definecolor{notebg}{RGB}{240,248,255}
+\definecolor{noteborder}{RGB}{30,90,160}
+\definecolor{warnbg}{RGB}{255,248,220}
+\definecolor{warnborder}{RGB}{200,140,0}
+
+% \definecolor{accent}{RGB}{38,84,124}
+% \definecolor{notebg}{RGB}{243,248,252}
+% \definecolor{noteborder}{RGB}{38,84,124}
+% \definecolor{warnbg}{RGB}{255,245,224}
+% \definecolor{warnborder}{RGB}{204,128,0}
+
+% ── Hyperref ──────────────────────────────────────────────────────────────────
+\hypersetup{
+    colorlinks=true,
+    linkcolor=accent,
+    urlcolor=accent,
+    citecolor=accent,
+    pdftitle={\AppName -- \DocName},
+    pdfauthor={\AppAuthor},
+}
+
+% ── Section headings ──────────────────────────────────────────────────────────
+\titleformat{\section}
+  {\large\bfseries\color{accent}}{\thesection}{1em}{}[\titlerule]
+\titleformat{\subsection}
+  {\normalsize\bfseries\color{accent}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+  {\normalsize\itshape}{\thesubsubsection}{1em}{}
+
+% ── Header / footer ───────────────────────────────────────────────────────────
+\setlength{\headheight}{14.5pt}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\textcolor{accent}{\small \AppName}}
+\lhead{\textcolor{gray}{\small \DocName}}
+\rfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ── Boxes ─────────────────────────────────────────────────────────────────────
+\tcbuselibrary{breakable,skins}
+
+\newtcolorbox{notebox}{
+  enhanced,breakable,
+  colback=notebg,colframe=noteborder,
+  leftrule=4pt,rightrule=0pt,toprule=0pt,bottomrule=0pt,
+  arc=2pt,outer arc=2pt,
+  left=6pt,right=6pt,top=4pt,bottom=4pt,
+  fonttitle=\bfseries\small,title={Note},
+}
+
+\newtcolorbox{warnbox}{
+  enhanced,breakable,
+  colback=warnbg,colframe=warnborder,
+  leftrule=4pt,rightrule=0pt,toprule=0pt,bottomrule=0pt,
+  arc=2pt,outer arc=2pt,
+  left=6pt,right=6pt,top=4pt,bottom=4pt,
+  fonttitle=\bfseries\small,title={Important},
+}
+
+\newtcolorbox{resultbox}{
+  enhanced,breakable,
+  colback=notebg,colframe=accent,
+  leftrule=1pt,rightrule=1pt,toprule=1pt,bottomrule=1pt,
+  arc=4pt,outer arc=4pt,
+  left=10pt,right=10pt,top=6pt,bottom=6pt,
+}
