@@ -4,7 +4,7 @@ What changed in each version of Maxwell Bloch Studio, newest first. At each
 release, the section of that version is also copied into the GitHub Release,
 where the app's update notice reads it.
 
-## 10.0.4 — unreleased
+## 10.0.4 — 2026-10-15
 - `mbstudio.scaling` now comes from the solver package (`mbsolver.scaling`,
   mbsolver 0.3); same results. Scripts that use only `mbsolver` can now get
   η and θ₀ from the physical sample values too.
