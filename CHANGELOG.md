@@ -4,7 +4,7 @@ What changed in each version of Maxwell Bloch Studio, newest first. At each
 release, the section of that version is also copied into the GitHub Release,
 where the app's update notice reads it.
 
-## 10.0.3 — unreleased
+## 10.0.3 — 2026-10-15
 - The update notice now lists what is new in the newer versions.
 
 ## 10.0.2 — 2026-10-15
