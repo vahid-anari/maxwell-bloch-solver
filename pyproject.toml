@@ -39,7 +39,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["build", "twine"]
+dev = ["build", "twine", "pytest"]
 
 [project.gui-scripts]
 maxwell-bloch-studio = "mbstudio.main:main"
@@ -55,3 +55,6 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "mbstudio.resources" = ["*.json", "*.pdf", "*.py", "icons/*.png"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,5 +1,7 @@
 # Maxwell Bloch Studio
 
+[![tests](https://github.com/vahid-anari/maxwell-bloch-studio/actions/workflows/tests.yml/badge.svg)](https://github.com/vahid-anari/maxwell-bloch-studio/actions/workflows/tests.yml)
+
 A PySide6 desktop application for simulating, visualizing, and fitting one-dimensional Maxwell-Bloch models to astronomical maser light-curve data. The application combines an interactive Qt interface, configurable physical and numerical parameters, Numba-accelerated time evolution, and publication-oriented plotting/export tools.
 
 <img src="https://raw.githubusercontent.com/vahid-anari/maxwell-bloch-studio/main/docs/figures/main_window.png" width="1512" alt="Maxwell Bloch Studio main window">
@@ -143,6 +145,13 @@ git clone https://github.com/vahid-anari/maxwell-bloch-studio.git
 cd maxwell-bloch-studio
 pip install -e .
 mbstudio
+```
+
+To run the tests:
+
+```bash
+pip install -e ".[dev]"
+pytest
 ```
 
 `python main.py` in the repository root also starts the app from the source

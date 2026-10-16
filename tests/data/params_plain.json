@@ -1,0 +1,512 @@
+{
+  "metadata": {
+    "app_version": "10.0.4",
+    "fit_mode": false
+  },
+  "config": {
+    "data.offset.time": {},
+    "data.unit.flux": {},
+    "data.unit.time": {},
+    "display.range.A0": {
+      "min_val": -10.0,
+      "max_val": 10.0,
+      "val_fmt": "{:.3S}"
+    },
+    "display.range.flux": {
+      "min_val": -1.0,
+      "max_val": 10.0,
+      "val_fmt": "{:.3S}"
+    },
+    "display.range.lambda_n": {
+      "min_val": -10.0,
+      "max_val": 10.0,
+      "val_fmt": "{:.3S}"
+    },
+    "display.range.t1": {
+      "min_val": -10.0,
+      "max_val": 10.0,
+      "val_fmt": "{:.3S}"
+    },
+    "display.range.t2": {
+      "min_val": -10.0,
+      "max_val": 10.0,
+      "val_fmt": "{:.3S}"
+    },
+    "display.range.time": {
+      "min_val": 0.0,
+      "max_val": 65000.0,
+      "val_fmt": "{:,.2f}"
+    },
+    "display.range.w": {
+      "min_val": -10.0,
+      "max_val": 10.0,
+      "val_fmt": "{:.3S}"
+    },
+    "results.offset.time": {
+      "min_val": 50000.0,
+      "max_val": 60000.0,
+      "val_fmt": "{:.6S}"
+    },
+    "results.scale.intensity": {
+      "min_val": 0.01,
+      "max_val": 100.0,
+      "val_fmt": "{:.3S}"
+    },
+    "results.scale.normalize": {},
+    "slice.z": {
+      "min_val": 0.0,
+      "max_val": 1.0,
+      "val_fmt": "{:.2f}"
+    },
+    "solve.bcs": {
+      "a": {
+        "min_val": -10.0,
+        "max_val": 10.0,
+        "val_fmt": "{:.3S}"
+      },
+      "x0": {
+        "min_val": 0.0,
+        "max_val": 1000.0,
+        "val_fmt": "{:.3S}"
+      },
+      "w": {
+        "min_val": 0.0,
+        "max_val": 10.0,
+        "val_fmt": "{:.3S}"
+      },
+      "wl": {
+        "min_val": 0.0,
+        "max_val": 10.0,
+        "val_fmt": "{:.3S}"
+      },
+      "wr": {
+        "min_val": 0.0,
+        "max_val": 10.0,
+        "val_fmt": "{:.3S}"
+      },
+      "xp": {
+        "min_val": 0.0,
+        "max_val": 10.0,
+        "val_fmt": "{:.3S}"
+      }
+    },
+    "solve.grid.nt": {
+      "min_val": 500,
+      "max_val": 5000,
+      "val_fmt": "{:.9S}"
+    },
+    "solve.grid.nz": {
+      "min_val": 500,
+      "max_val": 5000,
+      "val_fmt": "{:.9S}"
+    },
+    "solve.grid.t_max": {
+      "min_val": 100.0,
+      "max_val": 7000.0,
+      "val_fmt": "{:,.2f}"
+    },
+    "solve.ics": {
+      "w0": {
+        "min_val": -1.0,
+        "max_val": 1.0,
+        "val_fmt": "{:0.3S}"
+      },
+      "R0": {
+        "min_val": -1.0,
+        "max_val": 1.0,
+        "val_fmt": "{:0.3S}"
+      }
+    },
+    "solve.pump.pulse1": {
+      "a": {
+        "min_val": 0.0,
+        "max_val": 1.0,
+        "val_fmt": "{:.3S}"
+      },
+      "x0": {
+        "min_val": 0.0,
+        "max_val": 300.0,
+        "val_fmt": "{:.3S}"
+      },
+      "w": {
+        "min_val": 0.0,
+        "max_val": 20.0,
+        "val_fmt": "{:.3S}"
+      },
+      "wl": {
+        "min_val": 0.0,
+        "max_val": 10.0,
+        "val_fmt": "{:.3S}"
+      },
+      "wr": {
+        "min_val": 0.0,
+        "max_val": 10.0,
+        "val_fmt": "{:.3S}"
+      },
+      "xp": {
+        "min_val": 0.0,
+        "max_val": 300.0,
+        "val_fmt": "{:.3S}"
+      }
+    },
+    "solve.pump.pulse2": {
+      "a": {
+        "min_val": -10.0,
+        "max_val": 10.0,
+        "val_fmt": "{:.3S}"
+      },
+      "x0": {
+        "min_val": 0.0,
+        "max_val": 1000.0,
+        "val_fmt": "{:.3S}"
+      },
+      "w": {
+        "min_val": 0.0,
+        "max_val": 10.0,
+        "val_fmt": "{:.3S}"
+      },
+      "wl": {
+        "min_val": 0.0,
+        "max_val": 10.0,
+        "val_fmt": "{:.3S}"
+      },
+      "wr": {
+        "min_val": 0.0,
+        "max_val": 10.0,
+        "val_fmt": "{:.3S}"
+      },
+      "xp": {
+        "min_val": 0.0,
+        "max_val": 10.0,
+        "val_fmt": "{:.3S}"
+      }
+    },
+    "solve.pump.pulse3": {
+      "a": {
+        "min_val": -10.0,
+        "max_val": 10.0,
+        "val_fmt": "{:.3S}"
+      },
+      "x0": {
+        "min_val": 0.0,
+        "max_val": 1000.0,
+        "val_fmt": "{:.3S}"
+      },
+      "w": {
+        "min_val": 0.0,
+        "max_val": 10.0,
+        "val_fmt": "{:.3S}"
+      },
+      "wl": {
+        "min_val": 0.0,
+        "max_val": 10.0,
+        "val_fmt": "{:.3S}"
+      },
+      "wr": {
+        "min_val": 0.0,
+        "max_val": 10.0,
+        "val_fmt": "{:.3S}"
+      },
+      "xp": {
+        "min_val": 0.0,
+        "max_val": 10.0,
+        "val_fmt": "{:.3S}"
+      }
+    },
+    "solve.sample": {
+      "nu": {},
+      "gamma": {},
+      "t0": {},
+      "l": {
+        "min_val": 1000000000000.0,
+        "max_val": 10000000000000.0,
+        "val_fmt": "{:.3S}"
+      },
+      "n0": {
+        "min_val": 1e-07,
+        "max_val": 1e-06,
+        "val_fmt": "{:.3S}"
+      }
+    },
+    "solve.t1": {
+      "y": {
+        "min_val": 1.0,
+        "max_val": 100.0,
+        "val_fmt": "{:.3S}"
+      },
+      "x0": {
+        "min_val": 0.0,
+        "max_val": 300.0,
+        "val_fmt": "{:.3S}"
+      },
+      "w": {
+        "min_val": 0.0,
+        "max_val": 20.0,
+        "val_fmt": "{:.3S}"
+      },
+      "wl": {
+        "min_val": 0.0,
+        "max_val": 10.0,
+        "val_fmt": "{:.3S}"
+      },
+      "wr": {
+        "min_val": 0.0,
+        "max_val": 10.0,
+        "val_fmt": "{:.3S}"
+      },
+      "xp": {
+        "min_val": 0.0,
+        "max_val": 300.0,
+        "val_fmt": "{:.3S}"
+      }
+    },
+    "solve.t2": {
+      "y": {
+        "min_val": 1.0,
+        "max_val": 30.0,
+        "val_fmt": "{:.3S}"
+      },
+      "x0": {
+        "min_val": 0.0,
+        "max_val": 300.0,
+        "val_fmt": "{:.3S}"
+      },
+      "w": {
+        "min_val": 0.0,
+        "max_val": 20.0,
+        "val_fmt": "{:.3S}"
+      },
+      "wl": {
+        "min_val": 0.0,
+        "max_val": 10.0,
+        "val_fmt": "{:.3S}"
+      },
+      "wr": {
+        "min_val": 0.0,
+        "max_val": 10.0,
+        "val_fmt": "{:.3S}"
+      },
+      "xp": {
+        "min_val": 0.0,
+        "max_val": 300.0,
+        "val_fmt": "{:.3S}"
+      }
+    }
+  },
+  "params": {
+    "data.offset.time": 0.0,
+    "data.unit.flux": "Jy",
+    "data.unit.time": "d",
+    "display.range.A0": {
+      "use_margins": true,
+      "range": [
+        1.0,
+        10.0
+      ],
+      "margins": [
+        10,
+        10
+      ]
+    },
+    "display.range.flux": {
+      "use_margins": true,
+      "range": [
+        1.0,
+        10.0
+      ],
+      "margins": [
+        10,
+        10
+      ]
+    },
+    "display.range.lambda_n": {
+      "use_margins": true,
+      "range": [
+        1.0,
+        10.0
+      ],
+      "margins": [
+        10,
+        10
+      ]
+    },
+    "display.range.t1": {
+      "use_margins": true,
+      "range": [
+        1.0,
+        10.0
+      ],
+      "margins": [
+        10,
+        10
+      ]
+    },
+    "display.range.t2": {
+      "use_margins": true,
+      "range": [
+        1.0,
+        10.0
+      ],
+      "margins": [
+        10,
+        10
+      ]
+    },
+    "display.range.time": {
+      "use_margins": false,
+      "range": [
+        0.0,
+        2000.0
+      ],
+      "margins": [
+        10,
+        10
+      ]
+    },
+    "display.range.w": {
+      "use_margins": true,
+      "range": [
+        1.0,
+        10.0
+      ],
+      "margins": [
+        10,
+        10
+      ]
+    },
+    "results.offset.time": 50000.0,
+    "results.scale.intensity": 1.0,
+    "results.scale.normalize": true,
+    "slice.z": {
+      "arr_length": 21,
+      "index": 20
+    },
+    "solve.bcs": {
+      "a": [
+        0.0
+      ],
+      "x0": [
+        50.0
+      ],
+      "w": [
+        1.0
+      ],
+      "wl": [
+        1.0
+      ],
+      "wr": [
+        1.0
+      ],
+      "xp": 1.0,
+      "arr_length": 1,
+      "current_idx": 0,
+      "symmetric": true,
+      "same_a": false,
+      "same_w": false,
+      "same_wl": false,
+      "same_wr": false,
+      "use_xp": false
+    },
+    "solve.grid.nt": 2000,
+    "solve.grid.nz": 2000,
+    "solve.grid.t_max": 2000.0,
+    "solve.ics": {
+      "use_theta0": true,
+      "w0": 1.0,
+      "R0": 1e-08
+    },
+    "solve.pump.pulse1": {
+      "a": [
+        0.12,
+        0.12
+      ],
+      "x0": [
+        400.0,
+        1200.0
+      ],
+      "w": [
+        40.0,
+        40.0
+      ],
+      "wl": [
+        40.0,
+        40.0
+      ],
+      "wr": [
+        40.0,
+        40.0
+      ],
+      "xp": 250.0,
+      "arr_length": 2,
+      "current_idx": 0,
+      "symmetric": true,
+      "same_a": false,
+      "same_w": false,
+      "same_wl": false,
+      "same_wr": false,
+      "use_xp": false
+    },
+    "solve.pump.pulse2": {
+      "a": [
+        0.0
+      ],
+      "x0": [
+        50.0
+      ],
+      "w": [
+        1.0
+      ],
+      "wl": [
+        1.0
+      ],
+      "wr": [
+        1.0
+      ],
+      "xp": 1.0,
+      "arr_length": 1,
+      "current_idx": 0,
+      "symmetric": true,
+      "same_a": false,
+      "same_w": false,
+      "same_wl": false,
+      "same_wr": false,
+      "use_xp": false
+    },
+    "solve.pump.pulse3": {
+      "a": [
+        0.0
+      ],
+      "x0": [
+        50.0
+      ],
+      "w": [
+        1.0
+      ],
+      "wl": [
+        1.0
+      ],
+      "wr": [
+        1.0
+      ],
+      "xp": 1.0,
+      "arr_length": 1,
+      "current_idx": 0,
+      "symmetric": true,
+      "same_a": false,
+      "same_w": false,
+      "same_wl": false,
+      "same_wr": false,
+      "use_xp": false
+    },
+    "solve.sample": {
+      "_comment": "All values are in SI units.",
+      "nu": 6668519000.0,
+      "gamma": 1.56e-09,
+      "t0": 86400.0,
+      "l": 7500000000000.0,
+      "n0": 2e-05
+    },
+    "solve.t1": 45.0,
+    "solve.t2": 8.0
+  }
+}
