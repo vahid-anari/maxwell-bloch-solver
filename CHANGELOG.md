@@ -4,6 +4,16 @@ What changed in each version of Maxwell Bloch Studio, newest first. At each
 release, the section of that version is also copied into the GitHub Release,
 where the app's update notice reads it.
 
+## 10.0.7 — 2026-10-15
+- The splash screen now comes from sciwidgets 0.7 (looks the same).
+
+## 10.0.6 — 2026-10-15
+- No changes for users (version number only).
+
+## 10.0.5 — 2026-10-15
+- User Guide: new main-window screenshot.
+- Tests for the Python script API and the update notice.
+
 ## 10.0.4 — 2026-10-15
 - `mbstudio.scaling` now comes from the solver package (`mbsolver.scaling`,
   mbsolver 0.3); same results. Scripts that use only `mbsolver` can now get

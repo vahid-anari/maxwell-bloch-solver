@@ -5,5 +5,5 @@ numpy
 matplotlib
 psutil
 pygments
-sciwidgets~=0.6.0
+sciwidgets~=0.7.0
 mbsolver~=0.3.0

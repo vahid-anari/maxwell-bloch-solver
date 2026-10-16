@@ -7,9 +7,9 @@ objects.
 
 from __future__ import annotations
 
-from mbstudio.ui.splash_screen import show_splash_message
+from sciwidgets.splash import splash_message
 
-show_splash_message("Importing basic packages...")
+splash_message("Importing basic packages...")
 import copy
 import getpass
 import sys
@@ -26,28 +26,28 @@ from PySide6.QtWidgets import (
     QWidget
 )
 
-show_splash_message("Importing config packages / parameters tabs...")
+splash_message("Importing config packages / parameters tabs...")
 from mbstudio.app.parameter_tabs import ParameterTabsWidget
 
-show_splash_message("Importing config packages / plot...")
+splash_message("Importing config packages / plot...")
 from mbstudio.app.plot import PlotCanvas, PlotExporter
 
-show_splash_message("Importing config packages / settings manager...")
+splash_message("Importing config packages / settings manager...")
 from mbstudio.app.settings_manager import Settings
 
-show_splash_message("Importing config packages / solver...")
+splash_message("Importing config packages / solver...")
 from mbstudio.app.solver_controller import SolverController
 
-show_splash_message("Importing config packages / pipeline...")
+splash_message("Importing config packages / pipeline...")
 from mbstudio.app.update_pipeline import DisplayedCurves, UpdatePipeline, get_time_unit_scale
 
-show_splash_message("Importing config packages / velocity bar...")
+splash_message("Importing config packages / velocity bar...")
 from mbstudio.app.velocity_bar_controller import VelocityBarController
 
-show_splash_message("Importing config packages / update checker...")
+splash_message("Importing config packages / update checker...")
 from mbstudio.app.update_checker import RELEASES_URL, UpdateChecker
 
-show_splash_message("Importing config packages / data I/O...")
+splash_message("Importing config packages / data I/O...")
 from mbstudio.io.data_io import (
     LightCurve,
     analyze_folder,
@@ -58,7 +58,7 @@ from mbstudio.io.data_io import (
     show_data_folder_summary,
 )
 
-show_splash_message("Importing config packages / parameters I/O...")
+splash_message("Importing config packages / parameters I/O...")
 from mbstudio.io.parameter_io import (
     open_parameters,
     save_parameters,
@@ -66,7 +66,7 @@ from mbstudio.io.parameter_io import (
     save_params_atomic,
 )
 
-show_splash_message("Importing config packages / dialogs...")
+splash_message("Importing config packages / dialogs...")
 from mbstudio.ui.dialogs import (
     AskResult,
     ask_question,
@@ -76,7 +76,7 @@ from mbstudio.ui.dialogs import (
     show_warning
 )
 
-show_splash_message("Importing config packages / paths...")
+splash_message("Importing config packages / paths...")
 from mbstudio.paths import EQUATIONS_PDF_PATH, SETTINGS_FILE_PATH, USER_GUIDE_PATH
 from mbstudio.config.app_metadata import (
     APP_AUTHOR_EMAIL,
@@ -89,17 +89,17 @@ from mbstudio.config.app_metadata import (
     UPDATE_COMMAND,
 )
 
-show_splash_message("Importing config packages / style...")
+splash_message("Importing config packages / style...")
 from mbstudio.config.app_style import set_app_style
 from mbstudio.config.ui_defaults import NATIVE_MENU_BAR
 
-show_splash_message("Importing config packages / menu bar...")
-show_splash_message("Importing config packages / status bar...")
+splash_message("Importing config packages / menu bar...")
+splash_message("Importing config packages / status bar...")
 from enum import Enum
 from sciwidgets.plot import CurveCheckBox, CurveSelector
 from sciwidgets.window import MenuBarController, StatusBarController
 
-show_splash_message("Importing config packages / helper functions...")
+splash_message("Importing config packages / helper functions...")
 from mbstudio.utils.helper_funcs import pretty_json, read_json, set_win_center
 from mbstudio.ui.solver_step_viewer import StepScatterWidget
 from mbstudio.ui.update_dialog import UpdateDialog
@@ -148,7 +148,7 @@ def make_empty_light_curve() -> LightCurve:
     return LightCurve(np.empty(0), np.empty(0))
 
 
-show_splash_message("Creating Main GUI...")
+splash_message("Creating Main GUI...")
 
 
 class MBESolverApp(QMainWindow):
