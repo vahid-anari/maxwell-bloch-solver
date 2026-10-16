@@ -4,6 +4,11 @@ What changed in each version of Maxwell Bloch Studio, newest first. At each
 release, the section of that version is also copied into the GitHub Release,
 where the app's update notice reads it.
 
+## 10.4.0 — 2026-10-16
+- The launcher made by `mbstudio install-app` now updates itself: after an update, the
+  app refreshes it on its next start (icon and version shown in Finder), so you never
+  need to run `mbstudio install-app` again for that.
+
 ## 10.3.0 — 2026-10-16
 - *Update Now* in the update notice: the app installs the new version itself (no terminal
   needed), shows the progress, and then offers to restart. If the update cannot finish, it

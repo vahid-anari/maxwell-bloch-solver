@@ -5,11 +5,15 @@
 * Windows: a Start-menu shortcut, ``Maxwell Bloch Studio.lnk``.
 
 The launcher only starts this installation (``<this python> -m mbstudio``), so
-it keeps working after ``mbstudio update``. No Qt is imported here.
+it keeps working after ``mbstudio update``. It records the version that made it;
+``refresh_if_outdated`` (called when the app starts) rebuilds a launcher of this
+installation made by an older version, so its icon and Finder version follow
+updates. No Qt is imported here.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import plistlib
 import shlex
@@ -17,7 +21,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Callable, List, Optional, Sequence
+from typing import Callable, Dict, List, Optional, Sequence
 
 from mbstudio.config.app_metadata import APP_NAME, APP_VERSION
 from mbstudio.paths import APP_ICON_PATH
@@ -117,6 +121,7 @@ def _install_mac(app: Path, python: str, path_env: str, run: Callable) -> List[P
         "CFBundleInfoDictionaryVersion": "6.0",
         "LSMinimumSystemVersion": "11.0",
         "NSHighResolutionCapable": True,
+        "MBStudioPython": python,
     }
     with open(contents / "Info.plist", "wb") as fh:
         plistlib.dump(info, fh)
@@ -140,6 +145,8 @@ def _desktop_entry(python: str, icon: Path) -> str:
         "Terminal=false\n"
         "Categories=Science;Physics;Education;\n"
         f"StartupWMClass={APP_NAME}\n"
+        f"X-MBStudio-Version={APP_VERSION}\n"
+        f"X-MBStudio-Python={python}\n"
     )
 
 
@@ -181,7 +188,13 @@ def _install_windows(link: Path, home: Path, python: str, run: Callable) -> List
     result = run(windows_shortcut_command(link, python, icon, home))
     if getattr(result, "returncode", 0) != 0:
         raise OSError("PowerShell could not create the shortcut")
+    _windows_marker_path(home).write_text(json.dumps({"version": APP_VERSION, "python": python}),
+                                          encoding="utf-8")
     return [link, icon]
+
+
+def _windows_marker_path(home: Path) -> Path:
+    return _windows_icon_path(home).with_name("launcher.json")
 
 
 # ----- entry points ----------------------------------------------------------
@@ -222,7 +235,7 @@ def remove_app(*, system: Optional[str] = None, home: Optional[Path] = None) -> 
     if system == "linux":
         paths.append(_linux_icon_path(home))
     elif system == "windows":
-        paths.append(_windows_icon_path(home))
+        paths += [_windows_icon_path(home), _windows_marker_path(home)]
     removed = []
     for path in paths:
         if path.is_dir():
@@ -236,3 +249,75 @@ def remove_app(*, system: Optional[str] = None, home: Optional[Path] = None) -> 
         if folder.is_dir() and not any(folder.iterdir()):
             folder.rmdir()
     return removed
+
+
+# ----- keeping it current ----------------------------------------------------
+
+def launcher_info(system: Optional[str] = None, home: Optional[Path] = None) -> Optional[Dict[str, str]]:
+    """``{"version", "python"}`` of an existing launcher, or ``None`` if there is none.
+
+    ``version`` is the app version that made it (``""`` if not recorded),
+    ``python`` the Python it starts (``""`` if unknown).
+    """
+    system = system or current_system()
+    home = Path(home) if home is not None else Path.home()
+    target = launcher_path(system, home)
+    try:
+        if system == "mac":
+            plist = target / "Contents" / "Info.plist"
+            if not plist.is_file():
+                return None
+            info = plistlib.loads(plist.read_bytes())
+            python = info.get("MBStudioPython", "")
+            if not python:  # made by 10.2.0: read it from the start script
+                script = target / "Contents" / "MacOS" / info.get("CFBundleExecutable", "")
+                for line in script.read_text(encoding="utf-8").splitlines():
+                    if line.startswith("exec "):
+                        python = shlex.split(line)[1]
+            return {"version": str(info.get("CFBundleShortVersionString", "")), "python": python}
+        if system == "windows":
+            if not target.exists():
+                return None
+            marker = _windows_marker_path(home)
+            data = json.loads(marker.read_text(encoding="utf-8")) if marker.is_file() else {}
+            return {"version": str(data.get("version", "")), "python": str(data.get("python", ""))}
+        if not target.is_file():
+            return None
+        fields = dict(line.split("=", 1) for line in target.read_text(encoding="utf-8").splitlines()
+                      if "=" in line)
+        python = fields.get("X-MBStudio-Python", "")
+        if not python and fields.get("Exec"):  # made by 10.2.0
+            python = shlex.split(fields["Exec"])[0]
+        return {"version": fields.get("X-MBStudio-Version", ""), "python": python}
+    except (OSError, ValueError, IndexError, plistlib.InvalidFileException):
+        return {"version": "", "python": ""}
+
+
+def _same_file(a: str, b: str) -> bool:
+    """Whether two paths name the same Python (symlinks resolved)."""
+    try:
+        return Path(a).resolve() == Path(b).resolve()
+    except OSError:
+        return a == b
+
+
+def refresh_if_outdated(*, system: Optional[str] = None, home: Optional[Path] = None,
+                        python: Optional[str] = None, path_env: Optional[str] = None,
+                        run: Callable[[Sequence[str]], subprocess.CompletedProcess] = subprocess.run
+                        ) -> bool:
+    """Rebuild the launcher if it starts this installation and an older version made it.
+
+    A launcher of another installation (e.g. a pipx copy while a source
+    checkout runs) is left alone. Never raises; returns whether it rebuilt.
+    """
+    system = system or current_system()
+    try:
+        info = launcher_info(system, home)
+        if info is None or info["version"] == APP_VERSION:
+            return False
+        if not info["python"] or not _same_file(info["python"], python_for_launcher(system, python)):
+            return False
+        install_app(system=system, home=home, python=python, path_env=path_env, run=run)
+        return True
+    except Exception:  # a launcher problem must never stop the app
+        return False

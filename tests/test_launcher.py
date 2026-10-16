@@ -123,3 +123,52 @@ def test_cli_install_and_remove(tmp_path, monkeypatch, capsys):
 def test_finder_argument_is_ignored(capsys):
     assert cli.main(["-psn_0_12345", "--version"]) == 0
     assert APP_NAME in capsys.readouterr().out
+
+
+# ----- refreshing an old launcher (10.4.0) -----
+
+@pytest.mark.parametrize("system", ["mac", "linux", "windows"])
+def test_info_and_refresh(tmp_path, monkeypatch, system):
+    _, run = recorder()
+    python = str(tmp_path / "env" / "python")
+    assert launcher.launcher_info(system, tmp_path) is None
+    assert not launcher.refresh_if_outdated(system=system, home=tmp_path, python=python, run=run)
+
+    launcher.install_app(system=system, home=tmp_path, python=python, path_env="", run=run)
+    if system == "windows":                                       # recorder() made no real .lnk
+        launcher.launcher_path(system, tmp_path).write_text("")
+    info = launcher.launcher_info(system, tmp_path)
+    assert info == {"version": launcher.APP_VERSION, "python": python}
+    assert not launcher.refresh_if_outdated(system=system, home=tmp_path, python=python, run=run)
+
+    monkeypatch.setattr(launcher, "APP_VERSION", "99.0.0")        # the app was updated
+    other = str(tmp_path / "other" / "python")
+    assert not launcher.refresh_if_outdated(system=system, home=tmp_path, python=other, run=run)
+    assert launcher.refresh_if_outdated(system=system, home=tmp_path, python=python, run=run)
+    if system == "windows":
+        launcher.launcher_path(system, tmp_path).write_text("")
+    assert launcher.launcher_info(system, tmp_path)["version"] == "99.0.0"
+
+
+def test_refresh_reads_launchers_made_by_10_2_0(tmp_path, monkeypatch):
+    """10.2.0 did not record the Python; it is read from the start script / Exec line."""
+    _, run = recorder()
+    python = str(tmp_path / "py env" / "python")
+    launcher.install_app(system="mac", home=tmp_path, python=python, path_env="", run=run)
+    plist = launcher.launcher_path("mac", tmp_path) / "Contents" / "Info.plist"
+    info = plistlib.loads(plist.read_bytes())
+    del info["MBStudioPython"]
+    info["CFBundleShortVersionString"] = "10.2.0"
+    plist.write_bytes(plistlib.dumps(info))
+    assert launcher.launcher_info("mac", tmp_path) == {"version": "10.2.0", "python": python}
+    assert launcher.refresh_if_outdated(system="mac", home=tmp_path, python=python, run=run)
+
+    entry = launcher.launcher_path("linux", tmp_path)
+    entry.parent.mkdir(parents=True)
+    entry.write_text(f"[Desktop Entry]\nExec='{python}' -m mbstudio %f\n")
+    assert launcher.launcher_info("linux", tmp_path) == {"version": "", "python": python}
+
+
+def test_refresh_never_raises(tmp_path, monkeypatch):
+    monkeypatch.setattr(launcher, "launcher_info", lambda *a, **k: 1 / 0)
+    assert launcher.refresh_if_outdated(system="linux", home=tmp_path) is False
