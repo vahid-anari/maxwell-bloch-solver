@@ -105,6 +105,7 @@ splash_message("Importing config packages / helper functions...")
 from mbstudio.utils.helper_funcs import pretty_json, read_json, set_win_center
 from mbstudio.ui.solver_step_viewer import StepScatterWidget
 from mbstudio.ui.update_dialog import UpdateDialog
+from mbstudio.ui.update_progress import UpdateProgressDialog, restart_app
 from mbstudio.utils.units import VELOCITY_UNIT_TEXT
 from mbstudio.io.legacy_keys import merge_onto_defaults
 from sciwidgets.params import SliderWidgetBase
@@ -1046,27 +1047,29 @@ class MBESolverApp(QMainWindow):
                 newest first; empty when they could not be read.
         """
 
+        from mbstudio.cli import install_kind, update_command  # no Qt; cheap
+
         self._manual_update_check = False
-        if notes:
-            UpdateDialog(
-                APP_NAME, latest, APP_VERSION, UPDATE_COMMAND, DIST_NAME,
-                notes, url, RELEASES_URL, parent=self,
-            ).exec()
+        kind = install_kind()
+        command = update_command(kind)
+        hint = ("This copy runs from a source folder (pip install -e); update it there with "
+                "git pull." if kind == "editable" else "")
+        dialog = UpdateDialog(
+            APP_NAME, latest, APP_VERSION, " ".join(command) if command else UPDATE_COMMAND,
+            DIST_NAME, notes, url, RELEASES_URL, parent=self,
+            can_update=command is not None, hint=hint,
+        )
+        if dialog.exec() != UpdateDialog.UPDATE_NOW or command is None:
             return
-        result = ask_question(
-            title="Update Available",
-            text=f"<b>{APP_NAME} {latest}</b> is available.\nYou have version {APP_VERSION}.",
-            informative_text=(
-                "To update, close the app and run in a terminal:\n\n"
-                f"    {UPDATE_COMMAND}\n\n"
-                f"(or pip install -U {DIST_NAME} in the environment where you installed it)."
-            ),
-            yes_btn_label="Open PyPI Page",
-            cancel_btn_label="Later",
+        progress = UpdateProgressDialog(
+            command, APP_NAME, latest,
+            manual_hint=("Close the app and run <code>mbstudio update</code> in a terminal "
+                         f"(or <code>{' '.join(command)}</code>)."),
             parent=self,
         )
-        if result == AskResult.YES:
-            QDesktopServices.openUrl(QUrl(url))
+        progress.exec()
+        if progress.restart_requested:
+            restart_app(self.close)
 
     def _on_up_to_date(self) -> None:
         """Confirm the current version, but only when the user asked."""

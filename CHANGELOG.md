@@ -4,6 +4,11 @@ What changed in each version of Maxwell Bloch Studio, newest first. At each
 release, the section of that version is also copied into the GitHub Release,
 where the app's update notice reads it.
 
+## 10.3.0 — 2026-10-16
+- *Update Now* in the update notice: the app installs the new version itself (no terminal
+  needed), shows the progress, and then offers to restart. If the update cannot finish, it
+  says how to do it by hand.
+
 ## 10.2.0 — 2026-10-16
 - Start the app with a double-click: `mbstudio install-app` adds Maxwell Bloch Studio to
   your Applications folder (macOS; also Launchpad, Spotlight and the Dock), the Start menu

@@ -63,13 +63,15 @@ Use the menu bar to load data folders, adjust parameters, run the solver and exp
 ## Updating
 
 The app tells you when a new version is available and shows what is new in it
-(see also [CHANGELOG.md](https://github.com/vahid-anari/maxwell-bloch-studio/blob/main/CHANGELOG.md)). To update:
+(see also [CHANGELOG.md](https://github.com/vahid-anari/maxwell-bloch-studio/blob/main/CHANGELOG.md)).
+Click **Update Now** there and restart when it has finished. From a terminal:
 
 ```bash
-pipx upgrade maxwell-bloch-studio
+mbstudio update
 ```
 
-or `pip install -U maxwell-bloch-studio` in the environment where you installed it.
+(or `pipx upgrade maxwell-bloch-studio`, or `pip install -U maxwell-bloch-studio` in the
+environment where you installed it).
 
 ## Using the solver from Python
 

@@ -652,6 +652,14 @@ shows how to update and, below it, \textbf{What's new}: the release notes of eve
 newest first. \menu{Open Release Notes} opens all notes on GitHub. Without an internet connection
 the check is skipped silently.
 
+\menu{Update Now} installs the new version while the app stays open, with the same command as
+\texttt{mbstudio update} (Section~\ref{sec:cli}), and shows its progress. When it has finished,
+\menu{Restart Now} closes the app (asking about unsaved parameters as usual) and starts the new
+version; \menu{Later} keeps working with the old one until the next start. If the update cannot
+finish, for example without a network, the window says so; then close the app and run
+\texttt{mbstudio update} in a terminal. A copy run from a source folder (\texttt{pip install -e})
+is updated with \texttt{git pull} instead, so the button is off there.
+
 % ══════════════════════════════════════════════════════════════════════════════
 \section{Exporting Plots}
 
