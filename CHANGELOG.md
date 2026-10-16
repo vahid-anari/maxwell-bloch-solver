@@ -4,6 +4,11 @@ What changed in each version of Maxwell Bloch Studio, newest first. At each
 release, the section of that version is also copied into the GitHub Release,
 where the app's update notice reads it.
 
+## 10.1.1 — 2026-10-16
+- The curve and grid style dialogs now show each change on the plot at once, like the
+  span dialog; *Cancel* puts the old style back.
+- Uses sciwidgets 0.8.1.
+
 ## 10.1.0 — 2026-10-16
 - The current span can be restyled: right-click the plot → *Current span style…* sets
   the shaded area's fill colour and opacity and its edge colour, opacity, width and line,
