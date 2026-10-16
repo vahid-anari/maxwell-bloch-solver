@@ -180,7 +180,13 @@ then start it with
 \begin{verbatim}
 maxwell-bloch-studio
 \end{verbatim}
-or the shorter \texttt{mbstudio}. Until version 9 the application was called
+or the shorter \texttt{mbstudio}. To start it with a double-click instead, run once
+\begin{verbatim}
+mbstudio install-app
+\end{verbatim}
+which adds Maxwell Bloch Studio to the Applications folder on macOS (and so to Launchpad and
+Spotlight; drag it to the Dock to keep it there), to the Start menu on Windows, or to the
+applications menu on Linux (Section~\ref{sec:cli}). Until version 9 the application was called
 Maxwell Bloch Solver; saved settings and parameter files carry over.
 A splash screen appears during startup, followed by the main window.
 
@@ -199,6 +205,7 @@ The \texttt{mbstudio} command also works from a terminal:
   \texttt{mbstudio update} & update the app (asks first) \\
   \texttt{mbstudio solve FILE} & solve a parameter file without the window \\
   \texttt{mbstudio example [PATH]} & save the example script of Section~\ref{sec:python} \\
+  \texttt{mbstudio install-app} & start the app with a double-click (see below) \\
   \texttt{mbstudio -{}-help} & list all of this \\
   \bottomrule
 \end{tabular}
@@ -221,6 +228,12 @@ Section~\ref{sec:python}) and the parameters as JSON text, \texttt{params}; read
 \texttt{numpy.load}. For the parameter file of a data folder, choose a velocity with
 \texttt{-{}-velocity 12.3}, or solve every velocity with \texttt{-{}-all}, one file each.
 This runs on machines without a display, such as a computing cluster.
+
+\texttt{mbstudio install-app} makes a launcher: \texttt{Maxwell Bloch Studio.app} in
+\texttt{\textasciitilde/Applications} on macOS, a Start-menu shortcut on Windows, and an entry in the
+applications menu on Linux. It starts the installation it was made from, so it keeps working
+after \texttt{mbstudio update}; run it again if you install the app in another Python.
+\texttt{mbstudio install-app -{}-remove} removes it.
 
 \subsection{Operating Modes}
 

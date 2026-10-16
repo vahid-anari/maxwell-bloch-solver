@@ -34,6 +34,15 @@ If you work in a conda or virtual environment, install it there with pip instead
 pip install maxwell-bloch-studio
 ```
 
+To start the app with a double-click, run once:
+
+```bash
+mbstudio install-app
+```
+
+This adds Maxwell Bloch Studio to your Applications folder (macOS), the Start menu
+(Windows) or the applications menu (Linux). It keeps working after updates.
+
 ## Running the application
 
 ```bash
@@ -44,6 +53,7 @@ mbstudio update --check         # is there a newer version, and what's new
 mbstudio update                 # update (asks first)
 mbstudio solve params.json      # solve without the window, results to params_results.npz
 mbstudio example                # save the example script for your own Python scripts
+mbstudio install-app            # add the app to Applications / Start menu (--remove to undo)
 mbstudio --help                 # all options
 ```
 

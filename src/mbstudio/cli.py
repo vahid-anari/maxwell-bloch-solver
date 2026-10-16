@@ -6,6 +6,7 @@
     mbstudio update [--check]     update the app (or only check for a newer version)
     mbstudio solve FILE [...]     solve a parameter file without the window
     mbstudio example [PATH]       save the example script for your own Python scripts
+    mbstudio install-app          add the app to Applications / the Start menu / the app menu
 
 Only starting the app imports Qt widgets; the other commands stay light.
 """
@@ -27,7 +28,7 @@ from typing import Callable, List, Optional, Sequence, Tuple
 from mbstudio.config.app_metadata import APP_NAME, APP_VERSION, DIST_NAME, GITHUB_REPO
 
 PROG = "mbstudio"
-COMMANDS = ("update", "solve", "example")
+COMMANDS = ("update", "solve", "example", "install-app")
 TIMEOUT_S = 10
 
 PYPI_JSON_URL = f"https://pypi.org/pypi/{DIST_NAME}/json"
@@ -239,6 +240,39 @@ def cmd_example(args: argparse.Namespace) -> int:
     return 0
 
 
+# install-app -----------------------------------------------------------------
+
+PLACE = {"mac": "your Applications folder (also in Launchpad and Spotlight)",
+         "linux": "the applications menu",
+         "windows": "the Start menu"}
+
+
+def cmd_install_app(args: argparse.Namespace) -> int:
+    """``mbstudio install-app [--remove]``."""
+    from mbstudio import launcher
+
+    system = launcher.current_system()
+    if args.remove:
+        removed = launcher.remove_app(system=system)
+        if not removed:
+            print("No launcher found; nothing removed.")
+        for path in removed:
+            print(f"Removed {path}")
+        return 0
+    try:
+        written = launcher.install_app(system=system)
+    except (OSError, ValueError) as exc:
+        print(f"Could not create the launcher: {exc}", file=sys.stderr)
+        return 1
+    print(f"Created {written[0]}")
+    print(f"{APP_NAME} is now in {PLACE[system]}.")
+    note = " (your source folder)" if install_kind() == "editable" else ""
+    print(f"It starts the installation of this Python{note}: {launcher.python_for_launcher(system)}")
+    if system == "mac":
+        print("Drag it to the Dock to keep it there. Run this command again if you move Python.")
+    return 0
+
+
 # parsers ---------------------------------------------------------------------
 
 EPILOG = """\
@@ -246,6 +280,7 @@ commands:
   update [--check]      update the app, or only show whether a newer version exists
   solve FILE            solve a saved parameter file without the window
   example [PATH]        save the example script for your own Python scripts
+  install-app           add the app to Applications / the Start menu / the app menu
 
 Use 'mbstudio COMMAND --help' for the options of a command.
 """
@@ -286,6 +321,14 @@ def _command_parser(command: str) -> argparse.ArgumentParser:
         p.add_argument("--all", action="store_true", help="solve every velocity of a data-folder file")
         p.add_argument("-o", "--output", help="result file (default: FILE_results.npz next to FILE)")
         p.add_argument("--output-dir", help="folder for the result files (default: next to FILE)")
+    elif command == "install-app":
+        p = argparse.ArgumentParser(
+            prog=f"{PROG} install-app",
+            description="Make a launcher so the app starts with a double-click: an app in "
+                        "~/Applications on macOS, a Start-menu shortcut on Windows, an entry in "
+                        "the applications menu on Linux. It starts this installation, so it "
+                        "keeps working after 'mbstudio update'.")
+        p.add_argument("--remove", action="store_true", help="remove the launcher")
     else:
         p = argparse.ArgumentParser(
             prog=f"{PROG} example",
@@ -300,11 +343,13 @@ def _command_parser(command: str) -> argparse.ArgumentParser:
 def main(argv: Optional[Sequence[str]] = None) -> int:
     """Entry point of the ``mbstudio`` command."""
     args_list = list(sys.argv[1:] if argv is None else argv)
+    args_list = [a for a in args_list if not a.startswith("-psn_")]  # old macOS Finder argument
 
     if args_list and args_list[0] in COMMANDS:
         command = args_list[0]
         args = _command_parser(command).parse_args(args_list[1:])
-        handler = {"update": cmd_update, "solve": cmd_solve, "example": cmd_example}[command]
+        handler = {"update": cmd_update, "solve": cmd_solve, "example": cmd_example,
+                   "install-app": cmd_install_app}[command]
         return handler(args)
 
     args = _main_parser().parse_args(args_list)

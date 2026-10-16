@@ -4,6 +4,13 @@ What changed in each version of Maxwell Bloch Studio, newest first. At each
 release, the section of that version is also copied into the GitHub Release,
 where the app's update notice reads it.
 
+## 10.2.0 — 2026-10-16
+- Start the app with a double-click: `mbstudio install-app` adds Maxwell Bloch Studio to
+  your Applications folder (macOS; also Launchpad, Spotlight and the Dock), the Start menu
+  (Windows) or the applications menu (Linux). It keeps working after `mbstudio update`;
+  `mbstudio install-app --remove` takes it away. The Windows shortcut is new and not yet
+  tried on many machines; please report problems.
+
 ## 10.1.1 — 2026-10-16
 - The curve and grid style dialogs now show each change on the plot at once, like the
   span dialog; *Cancel* puts the old style back.
