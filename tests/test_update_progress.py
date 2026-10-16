@@ -1,11 +1,13 @@
 """Tests for "Update Now": the update dialog, the progress dialog and the restart."""
 
+import gc
 import os
 import sys
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
+from PySide6.QtCore import QEvent
 from PySide6.QtWidgets import QApplication
 
 from mbstudio.ui.update_dialog import UpdateDialog
@@ -14,7 +16,16 @@ from mbstudio.ui.update_progress import UpdateProgressDialog, restart_app, resta
 
 @pytest.fixture(scope="module", autouse=True)
 def qapp():
-    yield QApplication.instance() or QApplication([])
+    app = QApplication.instance() or QApplication([])
+    yield app
+    # Delete the dialogs while Qt is still running; left to Python's exit they can crash it
+    # ("shared QObject was deleted directly", segmentation fault after all tests passed).
+    for widget in app.topLevelWidgets():
+        widget.close()
+        widget.deleteLater()
+    app.sendPostedEvents(None, QEvent.DeferredDelete)
+    app.processEvents()
+    gc.collect()
 
 
 def run(code):
