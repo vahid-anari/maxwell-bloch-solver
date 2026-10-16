@@ -4,6 +4,13 @@ What changed in each version of Maxwell Bloch Studio, newest first. At each
 release, the section of that version is also copied into the GitHub Release,
 where the app's update notice reads it.
 
+## 10.1.0 — 2026-10-16
+- The current span can be restyled: right-click the plot → *Current span style…* sets
+  the shaded area's fill colour and opacity and its edge colour, opacity, width and line,
+  and the centre line's colour, opacity, width and line. Saved between sessions;
+  *View → Reset Plot Style* resets it.
+- Uses sciwidgets 0.8.
+
 ## 10.0.8 — 2026-10-15
 - New terminal commands: `mbstudio --version`, `mbstudio update`, `mbstudio solve FILE`
   (without the window, e.g. on a cluster), `mbstudio example`, and `mbstudio PATH` to open

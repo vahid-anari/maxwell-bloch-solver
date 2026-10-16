@@ -910,7 +910,7 @@ class MBESolverApp(QMainWindow):
 
     # ---- View menu ----
     def _reset_plot_style(self) -> None:
-        """Return curve styles, grids and legends to the settings file and save that."""
+        """Return curve styles, grids, legends and the span style to the settings file and save that."""
         self._canvas.reset_config()
         self._canvas.redraw()
         self._settings.save_plot_config(self._canvas.get_config())

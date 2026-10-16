@@ -79,6 +79,8 @@
       "span": {
         "kind": "vspan",
         "visible": false,
+        "name": "Current span",
+        "center": "span_center",
         "props": {
           "color": "b",
           "alpha": 0.1

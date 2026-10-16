@@ -431,12 +431,14 @@ The bottom panel displays one auxiliary quantity chosen from the \textbf{Bottom 
 The population inversion $w$ at the selected $z$ slice is drawn on a separate right axis of the
 same panel and is shown or hidden with the \textbf{w} check box, independently of the selector.
 
-\subsection{Current Span Marker}
+\subsection{Current Span Marker}\label{sec:current-span}
 
 When a BC, pump, $T_1$, or $T_2$ tab is active, the app can highlight the
 currently selected component: a vertical line marks its center $\tau_0^i$
 and a shaded region indicates its width. For pulse profiles this is the
 selected pulse; for step profiles it is the selected step.
+Its colours and edge can be changed from the plot's right-click menu
+(Section~\ref{sec:plot-style}).
 
 The marker is shown only when it matches the quantity in the bottom panel:
 \begin{itemize}[noitemsep]
@@ -457,7 +459,11 @@ Right-click a panel to change how it looks:
   \item \textbf{Grid:} horizontal and vertical grid lines, major and minor, for the panel and its
   right axis. \menu{Grid style...} sets line style, width and opacity for all grid lines of the
   figure; grid colours follow the curves automatically.
-  \item \textbf{Reset this panel:} returns the panel's curves and grids to their defaults.
+  \item \textbf{Current span style...:} the current span marker
+  (Section~\ref{sec:current-span}): fill colour and opacity, edge colour, opacity, width and
+  line (\menu{None} for no edge) of the shaded area, and colour, opacity, width and line of
+  the centre line. Each change shows at once; \menu{Cancel} puts the old style back.
+  \item \textbf{Reset this panel:} returns the panel's curves, grids and span to their defaults.
 \end{itemize}
 These choices are saved between sessions and are also used when exporting the plot.
 \menu{View $\to$ Reset Plot Style} returns the whole figure to its defaults.
@@ -598,12 +604,12 @@ inside the loaded data folder.
   Menu Item & Shortcut & Description \\
   \midrule
   Show Slider Range & \key{Ctrl+Alt+R} & Show or hide slider range labels \\
-  Reset Plot Style  & ---              & Return curve styles, grids and grid style to their defaults \\
+  Reset Plot Style  & ---              & Return curve styles, grids, grid style and span style to their defaults \\
   \bottomrule
 \end{tabular}
 \end{center}
 
-Grid lines, curve colours and line styles are set from the plot's right-click menu
+Grid lines, curve colours, line styles and the span style are set from the plot's right-click menu
 (Section~\ref{sec:plot-style}).
 
 % ══════════════════════════════════════════════════════════════════════════════
