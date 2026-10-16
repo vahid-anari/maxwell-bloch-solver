@@ -4,6 +4,11 @@ What changed in each version of Maxwell Bloch Studio, newest first. At each
 release, the section of that version is also copied into the GitHub Release,
 where the app's update notice reads it.
 
+## 10.0.8 — 2026-10-15
+- New terminal commands: `mbstudio --version`, `mbstudio update`, `mbstudio solve FILE`
+  (without the window, e.g. on a cluster), `mbstudio example`, and `mbstudio PATH` to open
+  a parameter file or data folder at start. See `mbstudio --help` and the User Guide.
+
 ## 10.0.7 — 2026-10-15
 - The splash screen now comes from sciwidgets 0.7 (looks the same).
 

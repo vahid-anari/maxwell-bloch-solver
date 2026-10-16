@@ -9,6 +9,7 @@ from __future__ import annotations
 import sys
 from collections.abc import Sequence
 
+from PySide6.QtCore import QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
@@ -16,12 +17,14 @@ from mbstudio.paths import APP_ICON_PATH, APP_IMAGE_PATH
 from mbstudio.config.app_metadata import APP_VERSION
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def main(argv: Sequence[str] | None = None, open_path: str | None = None) -> int:
     """Launch the Maxwell-Bloch solver application.
 
     Args:
         argv: Optional command-line argument sequence. If ``None``, the process
             arguments from ``sys.argv`` are used.
+        open_path: Parameter file or data folder to open once the window is
+            shown (``mbstudio PATH``).
 
     Returns:
         Qt application exit code.
@@ -64,6 +67,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     window = MBESolverApp(app)
     window.show()
     splash.finish(window)
+    if open_path:
+        QTimer.singleShot(0, lambda: window.open_path(open_path))
 
     return app.exec()
 

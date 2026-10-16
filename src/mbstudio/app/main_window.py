@@ -60,7 +60,9 @@ from mbstudio.io.data_io import (
 
 splash_message("Importing config packages / parameters I/O...")
 from mbstudio.io.parameter_io import (
+    is_fit_parameters_file,
     open_parameters,
+    read_parameters,
     save_parameters,
     save_parameters_as,
     save_params_atomic,
@@ -743,7 +745,41 @@ class MBESolverApp(QMainWindow):
         if not results:
             self._status_bar.set_state(StatusState.READY)
             return
+        self._apply_parameters(results)
+        show_information("Parameters Imported", "Parameters were imported successfully.", parent=self)
 
+    def open_path(self, path) -> None:
+        """Open a file or folder given on the command line (``mbstudio PATH``).
+
+        A folder is opened as a data folder; a parameter file saved with a data
+        folder opens that folder; any other parameter file is loaded as plain
+        parameters.
+
+        Args:
+            path: File or folder to open.
+        """
+        path = Path(path).expanduser()
+        if not path.exists():
+            show_critical("Cannot Open", f"{path} does not exist.", parent=self)
+            return
+        self._status_bar.set_state(StatusState.IMPORTING)
+        if path.is_dir():
+            self._load_data_folder_from_path(path)
+        elif is_fit_parameters_file(path):
+            self._load_data_folder_from_path(path.parent)
+        else:
+            results = read_parameters(path, self)
+            if results:
+                self._apply_parameters(results)
+            else:
+                self._status_bar.set_state(StatusState.READY)
+
+    def _apply_parameters(self, results) -> None:
+        """Load a plain parameter file's content into the widgets and solve.
+
+        Args:
+            results: Mapping from :func:`read_parameters` / :func:`open_parameters`.
+        """
         self._set_fit_mode(False)
         self._source_selection = SourceSelection()
         self._all_data.clear()
@@ -760,8 +796,6 @@ class MBESolverApp(QMainWindow):
         self._status_bar.set_state(StatusState.READY)
         self._pipeline.tasks.set_all()
         self._solver.solve()
-
-        show_information("Parameters Imported", "Parameters were imported successfully.", parent=self)
 
     def _close_data(self) -> None:
         """Close the current data folder and restore the default application state."""

@@ -184,6 +184,44 @@ or the shorter \texttt{mbstudio}. Until version 9 the application was called
 Maxwell Bloch Solver; saved settings and parameter files carry over.
 A splash screen appears during startup, followed by the main window.
 
+\subsection{Command Line}\label{sec:cli}
+
+The \texttt{mbstudio} command also works from a terminal:
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+  \toprule
+  Command & Effect \\
+  \midrule
+  \texttt{mbstudio} & start the application \\
+  \texttt{mbstudio PATH} & start it and open a parameter file or a data folder \\
+  \texttt{mbstudio -{}-version} & print the versions of the app, solver, widgets and Python \\
+  \texttt{mbstudio update -{}-check} & show whether a newer version exists, and what is new \\
+  \texttt{mbstudio update} & update the app (asks first) \\
+  \texttt{mbstudio solve FILE} & solve a parameter file without the window \\
+  \texttt{mbstudio example [PATH]} & save the example script of Section~\ref{sec:python} \\
+  \texttt{mbstudio -{}-help} & list all of this \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\texttt{mbstudio PATH} opens a folder as a data folder (Section~\ref{sec:fitmode}); a
+parameter file saved with a data folder opens that folder, and any other parameter file is
+loaded as with \menu{File $\to$ Open Parameters...}.
+
+\texttt{mbstudio update} finds out how the app was installed and runs
+\texttt{pipx upgrade maxwell-bloch-studio} or \texttt{pip install -U maxwell-bloch-studio} in
+the same Python; add \texttt{-{}-yes} to skip the question. A copy installed from a source folder
+(\texttt{pip install -e}) is updated there with \texttt{git pull} instead.
+
+\texttt{mbstudio solve FILE} computes the same numbers as the app and saves them to
+\texttt{FILE\_results.npz} next to the file (\texttt{-o NAME.npz} or \texttt{-{}-output-dir DIR}
+to choose). The file holds the arrays \texttt{time}, \texttt{intensity}, \texttt{w},
+\texttt{lambda\_n}, \texttt{A0}, \texttt{t1}, \texttt{t2} (as in
+Section~\ref{sec:python}) and the parameters as JSON text, \texttt{params}; read it with
+\texttt{numpy.load}. For the parameter file of a data folder, choose a velocity with
+\texttt{-{}-velocity 12.3}, or solve every velocity with \texttt{-{}-all}, one file each.
+This runs on machines without a display, such as a computing cluster.
+
 \subsection{Operating Modes}
 
 The application has two main modes.
@@ -641,7 +679,7 @@ persistent application settings using Qt's \texttt{QSettings}. On later launches
 instead of the factory defaults.
 
 % ══════════════════════════════════════════════════════════════════════════════
-\section{Using the Solver from Python}
+\section{Using the Solver from Python}\label{sec:python}
 
 Parameter files saved by the app can be solved in your own scripts, for example
 to run many cases without the window. Install the app with \texttt{pip} in the

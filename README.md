@@ -37,10 +37,17 @@ pip install maxwell-bloch-studio
 ## Running the application
 
 ```bash
-maxwell-bloch-studio
+mbstudio                        # start the app
+mbstudio params.json            # start it and open a parameter file or data folder
+mbstudio --version              # versions of the app, solver, widgets and Python
+mbstudio update --check         # is there a newer version, and what's new
+mbstudio update                 # update (asks first)
+mbstudio solve params.json      # solve without the window, results to params_results.npz
+mbstudio example                # save the example script for your own Python scripts
+mbstudio --help                 # all options
 ```
 
-(`mbstudio` is a shorter name for the same command, and `python -m mbstudio` works too.)
+`maxwell-bloch-studio` also starts the app, and `python -m mbstudio` works like `mbstudio`.
 Use the menu bar to load data folders, adjust parameters, run the solver and export plots.
 
 ## Updating

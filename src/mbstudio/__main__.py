@@ -1,5 +1,5 @@
-"""Start the app with ``python -m mbstudio``."""
+"""``python -m mbstudio``: the same as the ``mbstudio`` command."""
 
-from mbstudio.main import main
+from mbstudio.cli import main
 
 raise SystemExit(main())

@@ -40,16 +40,11 @@ def save_params_atomic(params_text: str, path: Path) -> None:
 def open_parameters(parent: QWidget) -> Optional[dict[str, Any]]:
     """Load a parameter snapshot chosen by the user.
 
-    Files saved in fit mode are rejected. Legacy parameter keys from older
-    files are renamed to their current names (see ``migrate_legacy_keys``).
-
     Args:
         parent: Parent widget for the file dialog and error dialogs.
 
     Returns:
-        Mapping with keys ``path`` (the selected file) and ``params`` (the
-        parsed file content), or ``None`` if the dialog is canceled, the file
-        is a fit-mode file, or loading fails.
+        See :func:`read_parameters`; ``None`` also when the dialog is canceled.
     """
 
     fname, _ = QFileDialog.getOpenFileName(
@@ -61,8 +56,39 @@ def open_parameters(parent: QWidget) -> Optional[dict[str, Any]]:
 
     if not fname:
         return None
+    return read_parameters(Path(fname), parent)
 
-    path = Path(fname)
+
+def is_fit_parameters_file(path: Path) -> bool:
+    """Whether ``path`` is a parameter file saved with a data folder (fit mode).
+
+    Returns ``False`` for plain parameter files and for anything unreadable.
+    """
+
+    try:
+        with Path(path).open("r", encoding="utf-8") as f:
+            meta = json.load(f).get("metadata")
+        return isinstance(meta, dict) and bool(meta.get("fit_mode"))
+    except (OSError, ValueError, AttributeError):
+        return False
+
+
+def read_parameters(path: Path, parent: QWidget) -> Optional[dict[str, Any]]:
+    """Read a plain parameter file, reporting problems in a dialog.
+
+    Files saved in fit mode are rejected. Legacy parameter keys from older
+    files are renamed to their current names (see ``migrate_legacy_keys``).
+
+    Args:
+        path: The parameter file.
+        parent: Parent widget for error dialogs.
+
+    Returns:
+        Mapping with keys ``path`` (the file) and ``params`` (the parsed file
+        content), or ``None`` if the file is a fit-mode file or loading fails.
+    """
+
+    path = Path(path)
     try:
         with path.open("r", encoding="utf-8") as f:
             params = json.load(f)
