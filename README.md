@@ -1,6 +1,9 @@
 # Maxwell Bloch Studio
 
 [![tests](https://github.com/vahid-anari/maxwell-bloch-studio/actions/workflows/tests.yml/badge.svg)](https://github.com/vahid-anari/maxwell-bloch-studio/actions/workflows/tests.yml)
+[![PyPI](https://img.shields.io/pypi/v/maxwell-bloch-studio)](https://pypi.org/project/maxwell-bloch-studio/)
+[![Python](https://img.shields.io/pypi/pyversions/maxwell-bloch-studio)](https://pypi.org/project/maxwell-bloch-studio/)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 A PySide6 desktop application for simulating, visualizing, and fitting one-dimensional Maxwell-Bloch models to astronomical maser light-curve data. The application combines an interactive Qt interface, configurable physical and numerical parameters, Numba-accelerated time evolution, and publication-oriented plotting/export tools.
 
@@ -190,6 +193,10 @@ src/mbstudio/
 The numerical solver is the [mbsolver](https://github.com/vahid-anari/mbsolver)
 package; the widgets come from [sciwidgets](https://github.com/vahid-anari/sciwidgets).
 
+What changed in each version is in [`CHANGELOG.md`](CHANGELOG.md). Pushing a
+tag `vX.Y.Z` publishes a GitHub Release with that version's section of the
+changelog; the app's update notice shows it as "What's new".
+
 ## Earlier name
 
 Up to version 9.2 the app was called **Maxwell Bloch Solver** (`pip install
@@ -205,6 +212,23 @@ pipx install maxwell-bloch-studio
 maxwell-bloch-studio`). Saved settings and parameter files carry over; in
 scripts, change `import mbsolver` to `import mbstudio`.
 
+## Citing
+
+If you use Maxwell Bloch Studio in published work, please cite it; GitHub's
+**Cite this repository** button gives the reference (from `CITATION.cff`).
+For the numerical solver itself, cite [mbsolver](https://github.com/vahid-anari/mbsolver#citing)
+(DOI [10.5281/zenodo.23407483](https://doi.org/10.5281/zenodo.23407483)).
+
 ## License
 
-This project is released under the MIT License. See [`LICENSE`](https://github.com/vahid-anari/maxwell-bloch-studio/blob/main/LICENSE) for details.
+MIT License. See [LICENSE](LICENSE).
+
+## Author
+
+Vahid Anari ·
+[GitHub](https://github.com/vahid-anari) ·
+[LinkedIn](https://www.linkedin.com/in/vahid-anari/)
+
+Related projects: [mbsolver](https://github.com/vahid-anari/mbsolver) ·
+[sciwidgets](https://github.com/vahid-anari/sciwidgets) ·
+[linecat](https://github.com/vahid-anari/linecat)

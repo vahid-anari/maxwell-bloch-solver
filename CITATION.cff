@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Maxwell Bloch Studio: a desktop application for Maxwell-Bloch models of astronomical masers"
+type: software
+authors:
+  - family-names: Anari
+    given-names: Vahid
+    orcid: "https://orcid.org/0000-0002-2464-3989"
+version: 10.4.0
+date-released: "2026-10-16"
+license: MIT
+repository-code: "https://github.com/vahid-anari/maxwell-bloch-studio"
+url: "https://pypi.org/project/maxwell-bloch-studio/"

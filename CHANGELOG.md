@@ -1,7 +1,7 @@
 # Changelog
 
-What changed in each version of Maxwell Bloch Studio, newest first. At each
-release, the section of that version is also copied into the GitHub Release,
+What changed in each version of Maxwell Bloch Studio, newest first. Pushing a
+version's tag publishes its section as the GitHub Release (`.github/workflows/release.yml`),
 where the app's update notice reads it.
 
 ## 10.4.0 — 2026-10-16
