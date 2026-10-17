@@ -48,5 +48,26 @@ APP_AUTHOR_GITHUB = f"https://github.com/{GITHUB_REPO}"
 APP_AUTHOR_WEBSITE = ""
 """Author website URL, if available."""
 
-UPDATE_COMMAND = f"pipx upgrade {DIST_NAME}"
-"""Command shown to the user when a newer version exists."""
+def _app_info():
+    from sciwidgets.app import AppInfo
+
+    from mbstudio.paths import APP_ICON_PATH
+
+    return AppInfo(
+        name=APP_NAME,
+        version=APP_VERSION,
+        dist_name=DIST_NAME,
+        module="mbstudio",
+        command="mbstudio",
+        github_repo=GITHUB_REPO,
+        icon=APP_ICON_PATH,
+        bundle_id="io.github.vahid-anari.mbstudio",
+        linux_id="maxwell-bloch-studio",
+        marker="MBStudio",  # keys recorded in installed launchers (MBStudioPython, X-MBStudio-*): keep
+        comment="Simulate and fit Maxwell-Bloch models of maser light curves",
+        categories="Science;Physics;Education;",
+    )
+
+
+APP = _app_info()
+"""The app for ``sciwidgets.app`` (launcher, update check)."""

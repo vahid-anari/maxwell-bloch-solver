@@ -4,6 +4,13 @@ What changed in each version of Maxwell Bloch Studio, newest first. Pushing a
 version's tag publishes its section as the GitHub Release (`.github/workflows/release.yml`),
 where the app's update notice reads it.
 
+## 10.5.0 — 2026-10-17
+- The launcher (`mbstudio install-app`) and the update check (`mbstudio update`,
+  Help ▸ Check for Updates…, Update Now) now come from sciwidgets 0.11 (`sciwidgets.app`),
+  shared with linecat. Nothing changes for users; installed launchers keep working.
+- Needs sciwidgets 0.11 (was 0.8): with it come the table, dialog and plot fixes of
+  sciwidgets 0.9–0.10.
+
 ## 10.4.0 — 2026-10-16
 - The launcher made by `mbstudio install-app` now updates itself: after an update, the
   app refreshes it on its next start (icon and version shown in Finder), so you never

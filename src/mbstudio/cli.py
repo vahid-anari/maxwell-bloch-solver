@@ -16,23 +16,18 @@ from __future__ import annotations
 import argparse
 import json
 import platform
-import shutil
-import subprocess
 import sys
 import time
-import urllib.request
 from importlib import metadata
 from pathlib import Path
-from typing import Callable, List, Optional, Sequence, Tuple
+from typing import Optional, Sequence
 
-from mbstudio.config.app_metadata import APP_NAME, APP_VERSION, DIST_NAME, GITHUB_REPO
+from mbstudio.config.app_metadata import APP, APP_NAME, APP_VERSION
 
 PROG = "mbstudio"
 COMMANDS = ("update", "solve", "example", "install-app")
 TIMEOUT_S = 10
 
-PYPI_JSON_URL = f"https://pypi.org/pypi/{DIST_NAME}/json"
-RELEASES_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases?per_page=30"
 
 
 # --version -------------------------------------------------------------------
@@ -55,108 +50,18 @@ def version_text() -> str:
 
 # update ----------------------------------------------------------------------
 
-def _get_json(url: str):
-    request = urllib.request.Request(url, headers={"User-Agent": f"{APP_NAME}/{APP_VERSION}"})
-    with urllib.request.urlopen(request, timeout=TIMEOUT_S) as response:
-        return json.loads(response.read().decode("utf-8"))
-
-
-def fetch_latest_version() -> str:
-    """Latest version on PyPI. Raises ``OSError``/``ValueError`` when it cannot be read."""
-    return str(_get_json(PYPI_JSON_URL)["info"]["version"])
-
-
-def fetch_release_notes(current: str, latest: str) -> List[Tuple[str, str]]:
-    """Notes of the versions after ``current`` up to ``latest``; empty if GitHub can't be read."""
-    from mbstudio.app.update_checker import newer_release_notes
-
-    try:
-        data = _get_json(RELEASES_API_URL)
-    except (OSError, ValueError):
-        return []
-    return newer_release_notes(data, current, latest) if isinstance(data, list) else []
-
-
 def install_kind() -> str:
     """How this copy was installed: ``"editable"``, ``"pipx"``, ``"pip"`` or ``"unknown"``."""
-    try:
-        dist = metadata.distribution(DIST_NAME)
-    except metadata.PackageNotFoundError:
-        return "unknown"
-    direct = dist.read_text("direct_url.json")
-    if direct:
-        try:
-            if json.loads(direct).get("dir_info", {}).get("editable"):
-                return "editable"
-        except ValueError:
-            pass
-    parts = Path(sys.prefix).parts
-    if "pipx" in parts and "venvs" in parts:
-        return "pipx"
-    return "pip"
+    from sciwidgets.app.update import install_kind as kind_of
+
+    return kind_of(APP)
 
 
-def update_command(kind: str) -> Optional[List[str]]:
-    """The command that updates an installation of the given kind, or ``None``."""
-    if kind == "pipx":
-        return [shutil.which("pipx") or "pipx", "upgrade", DIST_NAME]
-    if kind == "pip":
-        return [sys.executable, "-m", "pip", "install", "--upgrade", DIST_NAME]
-    return None
+def cmd_update(args: argparse.Namespace, **kwargs) -> int:
+    """``mbstudio update [--check] [--yes]`` (``sciwidgets.app.update.run_update``; kwargs for tests)."""
+    from sciwidgets.app.update import run_update
 
-
-def cmd_update(
-    args: argparse.Namespace,
-    *,
-    latest_version: Callable[[], str] = fetch_latest_version,
-    release_notes: Callable[[str, str], List[Tuple[str, str]]] = fetch_release_notes,
-    kind: Callable[[], str] = install_kind,
-    ask: Callable[[str], str] = input,
-    run: Callable[..., subprocess.CompletedProcess] = subprocess.run,
-) -> int:
-    """``mbstudio update [--check] [--yes]``."""
-    from mbstudio.app.update_checker import parse_version
-
-    try:
-        latest = latest_version()
-    except (OSError, ValueError, KeyError) as exc:
-        print(f"Could not check for updates: {exc}", file=sys.stderr)
-        return 1
-
-    if parse_version(latest) <= parse_version(APP_VERSION):
-        print(f"{APP_NAME} {APP_VERSION} is the latest version.")
-        return 0
-
-    print(f"{APP_NAME} {latest} is available. You have version {APP_VERSION}.")
-    notes = release_notes(APP_VERSION, latest)
-    if notes:
-        print("\nWhat's new:")
-        for version, body in notes:
-            print(f"\n{version}")
-            print("\n".join(f"  {line}" for line in body.splitlines()))
-        print()
-    if args.check:
-        return 0
-
-    how = kind()
-    if how == "editable":
-        print("This copy runs from a source folder (pip install -e). "
-              "Update it there with: git pull", file=sys.stderr)
-        return 1
-    command = update_command(how)
-    if command is None:
-        print(f"Cannot tell how {DIST_NAME} was installed; update it with "
-              f"pipx upgrade {DIST_NAME} or pip install -U {DIST_NAME}.", file=sys.stderr)
-        return 1
-
-    shown = " ".join(command)
-    if not args.yes:
-        answer = ask(f"Run: {shown}  [y/N] ").strip().lower()
-        if answer not in ("y", "yes"):
-            print("Nothing changed.")
-            return 0
-    print(f"Running: {shown}")
-    return run(command).returncode
+    return run_update(APP, args, **kwargs)
 
 
 # solve -----------------------------------------------------------------------
@@ -242,35 +147,12 @@ def cmd_example(args: argparse.Namespace) -> int:
 
 # install-app -----------------------------------------------------------------
 
-PLACE = {"mac": "your Applications folder (also in Launchpad and Spotlight)",
-         "linux": "the applications menu",
-         "windows": "the Start menu"}
-
-
 def cmd_install_app(args: argparse.Namespace) -> int:
-    """``mbstudio install-app [--remove]``."""
-    from mbstudio import launcher
+    """``mbstudio install-app [--remove]`` (``sciwidgets.app.launcher``)."""
+    from sciwidgets.app.launcher import install_app_command
 
-    system = launcher.current_system()
-    if args.remove:
-        removed = launcher.remove_app(system=system)
-        if not removed:
-            print("No launcher found; nothing removed.")
-        for path in removed:
-            print(f"Removed {path}")
-        return 0
-    try:
-        written = launcher.install_app(system=system)
-    except (OSError, ValueError) as exc:
-        print(f"Could not create the launcher: {exc}", file=sys.stderr)
-        return 1
-    print(f"Created {written[0]}")
-    print(f"{APP_NAME} is now in {PLACE[system]}.")
-    note = " (your source folder)" if install_kind() == "editable" else ""
-    print(f"It starts the installation of this Python{note}: {launcher.python_for_launcher(system)}")
-    if system == "mac":
-        print("Drag it to the Dock to keep it there. Run this command again if you move Python.")
-    return 0
+    note = " (your source folder)" if not args.remove and install_kind() == "editable" else ""
+    return install_app_command(APP, remove=args.remove, note=note)
 
 
 # parsers ---------------------------------------------------------------------

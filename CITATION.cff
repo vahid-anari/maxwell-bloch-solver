@@ -6,8 +6,8 @@ authors:
   - family-names: Anari
     given-names: Vahid
     orcid: "https://orcid.org/0000-0002-2464-3989"
-version: 10.4.0
-date-released: "2026-10-16"
+version: 10.5.0
+date-released: "2026-10-17"
 license: MIT
 repository-code: "https://github.com/vahid-anari/maxwell-bloch-studio"
 url: "https://pypi.org/project/maxwell-bloch-studio/"

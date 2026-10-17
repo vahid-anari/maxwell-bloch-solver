@@ -71,9 +71,11 @@ def main(argv: Sequence[str] | None = None, open_path: str | None = None) -> int
         QTimer.singleShot(0, lambda: window.open_path(open_path))
 
     def refresh_launcher() -> None:
-        from mbstudio.launcher import refresh_if_outdated
+        from sciwidgets.app.launcher import refresh_if_outdated
 
-        refresh_if_outdated()
+        from mbstudio.config.app_metadata import APP
+
+        refresh_if_outdated(APP)
 
     QTimer.singleShot(3000, refresh_launcher)  # after start-up; rebuilds an old launcher of this install
 

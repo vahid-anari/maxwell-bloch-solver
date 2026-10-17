@@ -45,7 +45,7 @@ splash_message("Importing config packages / velocity bar...")
 from mbstudio.app.velocity_bar_controller import VelocityBarController
 
 splash_message("Importing config packages / update checker...")
-from mbstudio.app.update_checker import RELEASES_URL, UpdateChecker
+from sciwidgets.app.update_ui import AppUpdates
 
 splash_message("Importing config packages / data I/O...")
 from mbstudio.io.data_io import (
@@ -74,8 +74,7 @@ from mbstudio.ui.dialogs import (
     ask_question,
     show_about_dialog,
     show_critical,
-    show_information,
-    show_warning
+    show_information
 )
 
 splash_message("Importing config packages / paths...")
@@ -87,8 +86,7 @@ from mbstudio.config.app_metadata import (
     APP_AUTHOR_WEBSITE,
     APP_NAME,
     APP_VERSION,
-    DIST_NAME,
-    UPDATE_COMMAND,
+    APP,
 )
 
 splash_message("Importing config packages / style...")
@@ -104,8 +102,6 @@ from sciwidgets.window import MenuBarController, StatusBarController
 splash_message("Importing config packages / helper functions...")
 from mbstudio.utils.helper_funcs import pretty_json, read_json, set_win_center
 from mbstudio.ui.solver_step_viewer import StepScatterWidget
-from mbstudio.ui.update_dialog import UpdateDialog
-from mbstudio.ui.update_progress import UpdateProgressDialog, restart_app
 from mbstudio.utils.units import VELOCITY_UNIT_TEXT
 from mbstudio.io.legacy_keys import merge_onto_defaults
 from sciwidgets.params import SliderWidgetBase
@@ -227,8 +223,8 @@ class MBESolverApp(QMainWindow):
             get_parameter_tabs_value=self._parameter_tabs.get_value,
         )
 
-        self._manual_update_check = False
-        self._update_checker = UpdateChecker(self)
+        # update check, notice, Update Now and restart (sciwidgets.app)
+        self._updates = AppUpdates(self, APP, success_note="Unsaved parameters are asked about as usual.")
 
         # ---- menu bar (needs coordinator objects ready) ----
         menu_spec = self._build_menu_spec()
@@ -249,9 +245,6 @@ class MBESolverApp(QMainWindow):
         self._parameter_tabs.showSpan.connect(self._on_show_span)
         self._bottom_plot_combo.currentIndexChanged.connect(lambda _: self._on_bottom_plot_changed())
         self._show_w_cb.toggled.connect(self._on_show_w_toggled)
-        self._update_checker.updateAvailable.connect(self._on_update_available)
-        self._update_checker.upToDate.connect(self._on_up_to_date)
-        self._update_checker.checkFailed.connect(self._on_update_check_failed)
         self._canvas.configChanged.connect(self._settings.save_plot_config)
 
         self._factory_default_config = self._parameter_tabs.get_config()
@@ -267,7 +260,7 @@ class MBESolverApp(QMainWindow):
         self._status_bar.set_modified()
         self._on_bottom_plot_changed()
         QTimer.singleShot(0, self._solver.solve)
-        QTimer.singleShot(2000, self._update_checker.check)
+        QTimer.singleShot(2000, self._updates.check)
 
     # ---- Layout ----
     def _make_layout(self) -> None:
@@ -1034,69 +1027,7 @@ class MBESolverApp(QMainWindow):
     def _check_for_updates_manually(self) -> None:
         """Run an update check from the Help menu and report every outcome."""
 
-        self._manual_update_check = True
-        self._update_checker.check()
-
-    def _on_update_available(self, latest: str, url: str, notes: list) -> None:
-        """Tell the user a newer version exists, how to install it, and what changed.
-
-        Args:
-            latest: Latest version string found on PyPI.
-            url: PyPI page of the application.
-            notes: ``(version, markdown)`` release notes of the newer versions,
-                newest first; empty when they could not be read.
-        """
-
-        from mbstudio.cli import install_kind, update_command  # no Qt; cheap
-
-        self._manual_update_check = False
-        kind = install_kind()
-        command = update_command(kind)
-        hint = ("This copy runs from a source folder (pip install -e); update it there with "
-                "git pull." if kind == "editable" else "")
-        dialog = UpdateDialog(
-            APP_NAME, latest, APP_VERSION, " ".join(command) if command else UPDATE_COMMAND,
-            DIST_NAME, notes, url, RELEASES_URL, parent=self,
-            can_update=command is not None, hint=hint,
-        )
-        if dialog.exec() != UpdateDialog.UPDATE_NOW or command is None:
-            return
-        progress = UpdateProgressDialog(
-            command, APP_NAME, latest,
-            manual_hint=("Close the app and run <code>mbstudio update</code> in a terminal "
-                         f"(or <code>{' '.join(command)}</code>)."),
-            parent=self,
-        )
-        progress.exec()
-        if progress.restart_requested:
-            restart_app(self.close)
-
-    def _on_up_to_date(self) -> None:
-        """Confirm the current version, but only when the user asked."""
-
-        if self._manual_update_check:
-            show_information(
-                title="No Updates",
-                text=f"{APP_NAME} {APP_VERSION} is the latest version.",
-                parent=self,
-            )
-        self._manual_update_check = False
-
-    def _on_update_check_failed(self, message: str) -> None:
-        """Report a failed check, but only when the user asked.
-
-        Args:
-            message: Error description from the update checker.
-        """
-
-        if self._manual_update_check:
-            show_warning(
-                title="Update Check Failed",
-                text="Could not check for updates.",
-                informative_text=escape(message),
-                parent=self,
-            )
-        self._manual_update_check = False
+        self._updates.check(manual=True)
 
     # ---- Signal handlers ----
     def _on_menu_action_triggered(self, _menu_id: str, action_id: str, checked: bool) -> None:
