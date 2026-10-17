@@ -36,7 +36,13 @@ jobs:
           fi
           echo "TAG=$TAG" >> "$GITHUB_ENV"
           echo "VERSION=$version" >> "$GITHUB_ENV"
-      - name: Create the release
+      - name: Create or update the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$TAG" --title "$VERSION" --notes-file notes.md --verify-tag
+        run: |
+          # an existing release (for example a draft made by hand) gets the changelog text and is published
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release edit "$TAG" --title "$VERSION" --notes-file notes.md --draft=false
+          else
+            gh release create "$TAG" --title "$VERSION" --notes-file notes.md --verify-tag
+          fi
